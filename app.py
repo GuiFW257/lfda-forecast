@@ -16,35 +16,41 @@ from statsmodels.tsa.holtwinters import SimpleExpSmoothing, Holt, ExponentialSmo
 
 st.set_page_config(
     page_title="LFDA Forecast",
-    page_icon="📈",
+    page_icon="🌱",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
 # -----------------------------
-# CSS — visual claro verde + azul elétrico
+# CSS — Campo Moderno + Inter
 # -----------------------------
 st.markdown(
     """
     <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
     :root {
-        --bg: #f4f7fb;
+        --bg: #f4f9f4;
         --panel: #ffffff;
-        --panel-2: #eef3f9;
-        --border: #c3d4e8;
-        --text: #0d1f2d;
-        --muted: #5a7a96;
-        --green: #00c853;
-        --green-dark: #00953e;
-        --blue: #0057ff;
-        --blue-dark: #0040cc;
-        --blue-light: #e8f0ff;
+        --panel-2: #e8f5e9;
+        --border: #b2d8b2;
+        --text: #1a2e1a;
+        --muted: #4a7a4a;
+        --green: #38b249;
+        --green-dark: #1a6b2f;
+        --green-light: #e8f5e9;
+        --blue: #1e7ec8;
+        --blue-dark: #155fa0;
+        --blue-light: #e3f2fd;
         --red: #e53935;
         --yellow: #f9a825;
+        --dark: #2d3a2e;
     }
 
+    * { font-family: 'Inter', sans-serif !important; }
+
     .stApp {
-        background: linear-gradient(135deg, #eef3f9 0%, #f4f7fb 60%, #e8f0ff 100%);
+        background: linear-gradient(135deg, #f0f7f0 0%, #f4f9f4 60%, #e8f5e9 100%);
         color: var(--text);
     }
 
@@ -54,32 +60,35 @@ st.markdown(
     }
 
     [data-testid="stSidebar"] * {
-        color: var(--text);
+        color: var(--text) !important;
+        font-family: 'Inter', sans-serif !important;
     }
 
     .main-header {
         padding: 1.25rem 0 1.1rem 0;
-        border-bottom: 2px solid var(--blue);
-        margin-bottom: 1.2rem;
+        border-bottom: 3px solid var(--green);
+        margin-bottom: 1.4rem;
     }
 
     .main-title {
-        font-size: 2.05rem;
+        font-size: 2.1rem;
         font-weight: 700;
-        letter-spacing: -0.035em;
-        color: var(--blue);
+        letter-spacing: -0.04em;
+        color: var(--green-dark);
         margin-bottom: 0.15rem;
     }
 
     .main-subtitle {
-        font-size: 1.02rem;
+        font-size: 1rem;
         color: var(--muted);
         margin-bottom: 0.45rem;
+        font-weight: 400;
     }
 
     .navline {
         color: var(--muted);
-        font-size: 0.88rem;
+        font-size: 0.87rem;
+        font-weight: 400;
     }
 
     .status-dot {
@@ -89,87 +98,181 @@ st.markdown(
         border-radius: 50%;
         background: var(--green);
         margin-right: 6px;
-        box-shadow: 0 0 10px rgba(0, 200, 83, 0.7);
-    }
-
-    .metric-card {
-        background: #ffffff;
-        border: 1px solid var(--border);
-        border-top: 3px solid var(--blue);
-        border-radius: 14px;
-        padding: 1rem 1.05rem;
-        min-height: 105px;
-        box-shadow: 0 4px 16px rgba(0, 87, 255, 0.08);
-    }
-
-    .metric-label {
-        color: var(--muted);
-        font-size: 0.78rem;
-        text-transform: uppercase;
-        letter-spacing: .06em;
-        margin-bottom: .35rem;
-    }
-
-    .metric-value {
-        color: var(--blue);
-        font-size: 1.55rem;
-        font-weight: 700;
-        letter-spacing: -0.02em;
-    }
-
-    .soft-card {
-        background: #ffffff;
-        border: 1px solid var(--border);
-        border-left: 4px solid var(--green);
-        border-radius: 14px;
-        padding: 1rem;
-        margin-bottom: 1rem;
-    }
-
-    .small-muted { color: var(--muted); font-size: .88rem; }
-    .green { color: var(--green); }
-
-    h1, h2, h3 {
-        letter-spacing: -0.025em;
-        color: var(--blue);
+        box-shadow: 0 0 8px rgba(56, 178, 73, 0.6);
     }
 
     div[data-testid="stMetric"] {
         background: #ffffff;
         border: 1px solid var(--border);
-        border-top: 3px solid var(--blue);
+        border-top: 3px solid var(--green);
         border-radius: 14px;
         padding: .8rem 1rem;
-        box-shadow: 0 2px 8px rgba(0, 87, 255, 0.07);
+        box-shadow: 0 2px 8px rgba(26, 107, 47, 0.07);
     }
 
     div[data-testid="stDataFrame"] {
         border: 1px solid var(--border);
         border-radius: 12px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
     }
 
     .stButton>button, .stDownloadButton>button {
         border-radius: 10px;
-        border: 2px solid var(--blue);
-        background: var(--blue);
+        border: 2px solid var(--green-dark);
+        background: var(--green-dark);
         color: #ffffff;
         font-weight: 600;
+        font-family: 'Inter', sans-serif !important;
     }
 
     .stButton>button:hover, .stDownloadButton>button:hover {
-        background: var(--blue-dark);
-        border-color: var(--blue-dark);
+        background: var(--green);
+        border-color: var(--green);
         color: white;
     }
 
-    [data-testid="stSidebar"] .stRadio label {
-        color: var(--text) !important;
+    h1, h2, h3 {
+        font-family: 'Inter', sans-serif !important;
+        letter-spacing: -0.03em;
+        color: var(--green-dark);
     }
 
-    [data-testid="stSidebar"] hr {
-        border-color: var(--border);
+    /* Capa */
+    .capa-hero {
+        background: linear-gradient(135deg, #1a6b2f 0%, #2d8a45 50%, #1e7ec8 100%);
+        border-radius: 20px;
+        padding: 3rem 2.5rem;
+        color: white;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
     }
+
+    .capa-title {
+        font-size: 2.8rem;
+        font-weight: 700;
+        letter-spacing: -0.04em;
+        margin-bottom: 0.4rem;
+        color: white;
+    }
+
+    .capa-subtitle {
+        font-size: 1.15rem;
+        font-weight: 400;
+        opacity: 0.88;
+        margin-bottom: 1.5rem;
+        color: white;
+    }
+
+    .capa-badge {
+        display: inline-block;
+        background: rgba(255,255,255,0.18);
+        border: 1px solid rgba(255,255,255,0.35);
+        border-radius: 20px;
+        padding: 0.3rem 1rem;
+        font-size: 0.82rem;
+        font-weight: 500;
+        color: white;
+        margin-right: 8px;
+        margin-bottom: 8px;
+    }
+
+    .info-card {
+        background: #ffffff;
+        border: 1px solid var(--border);
+        border-left: 4px solid var(--green);
+        border-radius: 12px;
+        padding: 1.2rem 1.4rem;
+        margin-bottom: 1rem;
+    }
+
+    .info-card-blue {
+        background: #ffffff;
+        border: 1px solid #b3d4ef;
+        border-left: 4px solid var(--blue);
+        border-radius: 12px;
+        padding: 1.2rem 1.4rem;
+        margin-bottom: 1rem;
+    }
+
+    .step-flow {
+        display: flex;
+        align-items: flex-start;
+        gap: 0px;
+        margin: 1.5rem 0;
+        flex-wrap: wrap;
+    }
+
+    .step-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-width: 100px;
+        flex: 1;
+    }
+
+    .step-circle {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        background: var(--green-dark);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.1rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        font-family: 'Inter', sans-serif;
+    }
+
+    .step-label {
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: var(--green-dark);
+        text-align: center;
+        font-family: 'Inter', sans-serif;
+    }
+
+    .step-desc {
+        font-size: 0.72rem;
+        color: var(--muted);
+        text-align: center;
+        margin-top: 2px;
+        font-family: 'Inter', sans-serif;
+    }
+
+    .step-arrow {
+        font-size: 1.4rem;
+        color: var(--border);
+        margin-top: 12px;
+        padding: 0 4px;
+        flex: 0;
+    }
+
+    .model-card {
+        background: #ffffff;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 1rem 1.2rem;
+        height: 100%;
+    }
+
+    .model-title {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: var(--green-dark);
+        margin-bottom: 0.3rem;
+    }
+
+    .model-desc {
+        font-size: 0.82rem;
+        color: var(--muted);
+        line-height: 1.5;
+    }
+
+    .small-muted { color: var(--muted); font-size: .88rem; }
+    .green { color: var(--green); }
     </style>
     """,
     unsafe_allow_html=True,
@@ -184,7 +287,7 @@ st.markdown(
     <div class="main-header">
         <div class="main-title">LFDA Forecast</div>
         <div class="main-subtitle">Sistema de Previsão de Demanda</div>
-        <div class="navline">Upload • Auditoria • Modelos • Forecast • Resultados&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="status-dot"></span>Processamento local</div>
+        <div class="navline">Upload • Auditoria • Modelos • Forecast • Resultados&nbsp;&nbsp;&nbsp;&nbsp;<span class="status-dot"></span>Processamento local</div>
     </div>
     """,
     unsafe_allow_html=True,
@@ -217,15 +320,12 @@ def clean_dataframe(df: pd.DataFrame) -> pd.DataFrame:
 
 def infer_columns(df: pd.DataFrame) -> Tuple[Optional[str], Optional[str], Optional[str]]:
     norm_map = {col: normalize_col(col) for col in df.columns}
-
     product_keys = ["produto", "product", "item", "sku", "material", "codigo", "descricao", "cliente_produto"]
     date_keys = ["data", "date", "mes", "month", "periodo", "competencia", "ano_mes", "mes_ano"]
     qty_keys = ["quantidade", "quantity", "qty", "qtd", "demanda", "demand", "volume", "vendas", "sales"]
-
     product_col = next((c for c, n in norm_map.items() if any(k in n for k in product_keys)), None)
     date_col = next((c for c, n in norm_map.items() if any(k in n for k in date_keys)), None)
     qty_col = next((c for c, n in norm_map.items() if any(k in n for k in qty_keys)), None)
-
     if qty_col is None:
         numeric_scores = []
         for c in df.columns:
@@ -233,7 +333,6 @@ def infer_columns(df: pd.DataFrame) -> Tuple[Optional[str], Optional[str], Optio
             numeric_scores.append((c, s.notna().sum()))
         if numeric_scores:
             qty_col = max(numeric_scores, key=lambda x: x[1])[0]
-
     return product_col, date_col, qty_col
 
 
@@ -256,37 +355,31 @@ MONTHS_PT = {
 def parse_month_date(value):
     if pd.isna(value):
         return pd.NaT
-
     if isinstance(value, (pd.Timestamp, np.datetime64)):
         return pd.to_datetime(value).to_period("M").to_timestamp()
-
     raw = str(value).strip().lower()
     raw = strip_accents(raw)
     raw = raw.replace(" de ", " ").replace("/", " ").replace("-", " ").replace(".", " ")
     raw = re.sub(r"\s+", " ", raw).strip()
-
     m = re.match(r"^(\d{1,2})\s+(\d{4})$", raw)
     if m:
         month = int(m.group(1))
         year = int(m.group(2))
         if 1 <= month <= 12:
             return pd.Timestamp(year=year, month=month, day=1)
-
     parts = raw.split()
     if len(parts) >= 2:
         month_word = parts[0]
         year_match = re.search(r"(20\d{2}|19\d{2})", raw)
         if month_word in MONTHS_PT and year_match:
             return pd.Timestamp(year=int(year_match.group(1)), month=MONTHS_PT[month_word], day=1)
-
     parsed = pd.to_datetime(value, errors="coerce", dayfirst=True)
     if pd.notna(parsed):
         return parsed.to_period("M").to_timestamp()
-
     return pd.NaT
 
 
-def prepare_monthly(df: pd.DataFrame, product_col: str, date_col: str, qty_col: str) -> pd.DataFrame:
+def prepare_monthly(df, product_col, date_col, qty_col):
     out = df[[product_col, date_col, qty_col]].copy()
     out.columns = ["Produto", "Data", "Quantidade"]
     out["Produto"] = out["Produto"].astype(str).str.strip()
@@ -298,14 +391,14 @@ def prepare_monthly(df: pd.DataFrame, product_col: str, date_col: str, qty_col: 
     return out.sort_values(["Produto", "Data"])
 
 
-def monthly_to_quarterly(monthly: pd.DataFrame) -> pd.DataFrame:
+def monthly_to_quarterly(monthly):
     q = monthly.copy()
     q["Trimestre"] = q["Data"].dt.to_period("Q").dt.to_timestamp()
     q = q.groupby(["Produto", "Trimestre"], as_index=False)["Quantidade"].sum()
     return q.sort_values(["Produto", "Trimestre"])
 
 
-def fill_missing_quarters(qdf: pd.DataFrame) -> pd.DataFrame:
+def fill_missing_quarters(qdf):
     frames = []
     for prod, g in qdf.groupby("Produto"):
         g = g.sort_values("Trimestre")
@@ -318,7 +411,7 @@ def fill_missing_quarters(qdf: pd.DataFrame) -> pd.DataFrame:
     return pd.concat(frames, ignore_index=True) if frames else qdf
 
 
-def treat_zeros_preserve_total(values: np.ndarray) -> np.ndarray:
+def treat_zeros_preserve_total(values):
     y = np.array(values, dtype=float).copy()
     n = len(y)
     i = 0
@@ -333,10 +426,9 @@ def treat_zeros_preserve_total(values: np.ndarray) -> np.ndarray:
             if left >= 0 and right < n and y[left] > 0 and y[right] > 0:
                 k = end_zero - start_zero + 1
                 avg_extremes = (y[left] + y[right]) / 2.0
-                total_to_zeros = avg_extremes
-                per_zero = total_to_zeros / k
+                per_zero = avg_extremes / k
                 y[start_zero:i] = per_zero
-                reduction_total = total_to_zeros
+                reduction_total = avg_extremes
                 denom = y[left] + y[right]
                 if denom > 0:
                     y[left] = max(0.0, y[left] - reduction_total * (y[left] / denom))
@@ -346,7 +438,7 @@ def treat_zeros_preserve_total(values: np.ndarray) -> np.ndarray:
     return y
 
 
-def split_train_test(y: pd.Series) -> Tuple[pd.Series, pd.Series, str]:
+def split_train_test(y):
     n = len(y)
     if n >= 17:
         return y.iloc[:-4], y.iloc[-4:], "13+ treino / 4 teste"
@@ -361,7 +453,7 @@ def split_train_test(y: pd.Series) -> Tuple[pd.Series, pd.Series, str]:
     return y, pd.Series(dtype=float), "Forecast exploratório sem teste"
 
 
-def safe_mape(actual, pred) -> float:
+def safe_mape(actual, pred):
     actual = np.array(actual, dtype=float)
     pred = np.array(pred, dtype=float)
     mask = actual != 0
@@ -370,7 +462,7 @@ def safe_mape(actual, pred) -> float:
     return float(np.mean(np.abs((actual[mask] - pred[mask]) / actual[mask])) * 100)
 
 
-def agg_mape(actual, pred) -> float:
+def agg_mape(actual, pred):
     actual_sum = float(np.sum(actual))
     pred_sum = float(np.sum(pred))
     if actual_sum == 0:
@@ -378,7 +470,7 @@ def agg_mape(actual, pred) -> float:
     return abs(actual_sum - pred_sum) / abs(actual_sum) * 100
 
 
-def model_params(fit) -> Dict[str, Optional[float]]:
+def model_params(fit):
     params = getattr(fit, "params", {}) or {}
     return {
         "Alpha": params.get("smoothing_level", np.nan),
@@ -387,12 +479,11 @@ def model_params(fit) -> Dict[str, Optional[float]]:
     }
 
 
-def fit_forecast_model(model_name: str, train: pd.Series, steps: int):
+def fit_forecast_model(model_name, train, steps):
     y = train.astype(float)
     if len(y) < 2:
         fc = np.repeat(y.iloc[-1] if len(y) else 0.0, steps)
         return None, pd.Series(fc)
-
     if model_name == "SES":
         fit = SimpleExpSmoothing(y, initialization_method="estimated").fit(optimized=True)
     elif model_name == "Holt":
@@ -400,38 +491,27 @@ def fit_forecast_model(model_name: str, train: pd.Series, steps: int):
     elif model_name == "Holt-Winters":
         if len(y) >= 8:
             fit = ExponentialSmoothing(
-                y,
-                trend="add",
-                seasonal="add",
-                seasonal_periods=4,
+                y, trend="add", seasonal="add", seasonal_periods=4,
                 initialization_method="estimated",
             ).fit(optimized=True)
         else:
             fit = Holt(y, initialization_method="estimated").fit(optimized=True)
     else:
         raise ValueError("Modelo inválido")
-
     return fit, fit.forecast(steps)
 
 
-def future_quarters(last_quarter: pd.Timestamp, periods: int = 4) -> List[pd.Timestamp]:
+def future_quarters(last_quarter, periods=4):
     start = pd.Period(last_quarter, freq="Q") + 1
     return list(pd.period_range(start, periods=periods, freq="Q").to_timestamp())
 
 
-def quarter_label(ts) -> str:
+def quarter_label(ts):
     p = pd.Period(ts, freq="Q")
     return f"{p.year}T{p.quarter}"
 
 
-@dataclass
-class ProductResult:
-    model_summary: pd.DataFrame
-    audit: pd.DataFrame
-    forecast: pd.DataFrame
-
-
-def run_models(q: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+def run_models(q):
     treated_frames = []
     summaries = []
     audits = []
@@ -447,13 +527,11 @@ def run_models(q: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFram
         y = pd.Series(treated, index=g["Trimestre"])
         train, test, split_rule = split_train_test(y)
 
-        models = ["SES", "Holt", "Holt-Winters"]
-        for model_name in models:
+        for model_name in ["SES", "Holt", "Holt-Winters"]:
             test_steps = len(test)
             try:
                 fit_bt, pred_test = fit_forecast_model(model_name, train, max(test_steps, 1))
                 pred_test = pd.Series(pred_test).iloc[:test_steps].values if test_steps > 0 else np.array([])
-
                 period_mape = safe_mape(test.values, pred_test) if test_steps else np.nan
                 aggregate_mape = agg_mape(test.values, pred_test) if test_steps else np.nan
                 params = model_params(fit_bt) if fit_bt is not None else {"Alpha": np.nan, "Beta": np.nan, "Gamma": np.nan}
@@ -465,33 +543,19 @@ def run_models(q: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFram
                     err = actual_treated - pred if pd.notna(pred) else np.nan
                     mape_i = abs(err / actual_treated) * 100 if actual_treated != 0 and pd.notna(err) else np.nan
                     audits.append({
-                        "Produto": prod,
-                        "Modelo": model_name,
-                        "Tipo": "Teste",
-                        "Trimestre": quarter_label(dt),
-                        "Valor Real": actual_original,
-                        "Valor Tratado": actual_treated,
-                        "Valor Previsto": pred,
-                        "Erro": err,
-                        "MAPE %": mape_i,
-                        "Alpha": params["Alpha"],
-                        "Beta": params["Beta"],
-                        "Gamma": params["Gamma"],
+                        "Produto": prod, "Modelo": model_name, "Tipo": "Teste",
+                        "Trimestre": quarter_label(dt), "Valor Real": actual_original,
+                        "Valor Tratado": actual_treated, "Valor Previsto": pred,
+                        "Erro": err, "MAPE %": mape_i,
+                        "Alpha": params["Alpha"], "Beta": params["Beta"], "Gamma": params["Gamma"],
                         "Regra Treino/Teste": split_rule,
                     })
 
                 summaries.append({
-                    "Produto": prod,
-                    "Modelo": model_name,
-                    "Períodos": len(y),
-                    "Treino": len(train),
-                    "Teste": len(test),
-                    "Regra": split_rule,
-                    "MAPE Período Médio %": period_mape,
-                    "MAPE Agregado %": aggregate_mape,
-                    "Alpha": params["Alpha"],
-                    "Beta": params["Beta"],
-                    "Gamma": params["Gamma"],
+                    "Produto": prod, "Modelo": model_name, "Períodos": len(y),
+                    "Treino": len(train), "Teste": len(test), "Regra": split_rule,
+                    "MAPE Período Médio %": period_mape, "MAPE Agregado %": aggregate_mape,
+                    "Alpha": params["Alpha"], "Beta": params["Beta"], "Gamma": params["Gamma"],
                 })
 
                 fit_full, fc = fit_forecast_model(model_name, y, 4)
@@ -511,34 +575,21 @@ def run_models(q: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFram
                 future = future_quarters(g["Trimestre"].max(), 4)
                 params_full = model_params(fit_full) if fit_full is not None else params
                 for h, dt in enumerate(future, start=1):
-                    pred = max(0.0, float(fc[h - 1]))
+                    pred_val = max(0.0, float(fc[h - 1]))
                     interval = z90 * residual_std * np.sqrt(h)
                     forecasts.append({
-                        "Produto": prod,
-                        "Modelo": model_name,
-                        "Trimestre": quarter_label(dt),
-                        "Forecast": pred,
-                        "IC 90% Inferior": max(0.0, pred - interval),
-                        "IC 90% Superior": pred + interval,
-                        "Alpha": params_full["Alpha"],
-                        "Beta": params_full["Beta"],
-                        "Gamma": params_full["Gamma"],
+                        "Produto": prod, "Modelo": model_name, "Trimestre": quarter_label(dt),
+                        "Forecast": pred_val, "IC 90% Inferior": max(0.0, pred_val - interval),
+                        "IC 90% Superior": pred_val + interval,
+                        "Alpha": params_full["Alpha"], "Beta": params_full["Beta"], "Gamma": params_full["Gamma"],
                     })
 
             except Exception as exc:
                 summaries.append({
-                    "Produto": prod,
-                    "Modelo": model_name,
-                    "Períodos": len(y),
-                    "Treino": len(train),
-                    "Teste": len(test),
-                    "Regra": split_rule,
-                    "MAPE Período Médio %": np.nan,
-                    "MAPE Agregado %": np.nan,
-                    "Alpha": np.nan,
-                    "Beta": np.nan,
-                    "Gamma": np.nan,
-                    "Erro Modelo": str(exc),
+                    "Produto": prod, "Modelo": model_name, "Períodos": len(y),
+                    "Treino": len(train), "Teste": len(test), "Regra": split_rule,
+                    "MAPE Período Médio %": np.nan, "MAPE Agregado %": np.nan,
+                    "Alpha": np.nan, "Beta": np.nan, "Gamma": np.nan, "Erro Modelo": str(exc),
                 })
 
     treated_df = pd.concat(treated_frames, ignore_index=True) if treated_frames else pd.DataFrame()
@@ -554,7 +605,7 @@ def run_models(q: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFram
     return treated_df, summary_df, audit_df, forecast_df
 
 
-def to_excel_bytes(sheets: Dict[str, pd.DataFrame]) -> bytes:
+def to_excel_bytes(sheets):
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
         for name, df in sheets.items():
@@ -563,10 +614,8 @@ def to_excel_bytes(sheets: Dict[str, pd.DataFrame]) -> bytes:
             workbook = writer.book
             worksheet = writer.sheets[safe_name]
             header_fmt = workbook.add_format({
-                "bold": True,
-                "font_color": "#FFFFFF",
-                "bg_color": "#0057ff",
-                "border": 1,
+                "bold": True, "font_color": "#FFFFFF",
+                "bg_color": "#1a6b2f", "border": 1,
             })
             num_fmt = workbook.add_format({"num_format": "#,##0.00"})
             for col_num, col_name in enumerate(df.columns):
@@ -582,12 +631,12 @@ def to_excel_bytes(sheets: Dict[str, pd.DataFrame]) -> bytes:
 # =========================================================
 # Sidebar
 # =========================================================
-st.sidebar.markdown("### LFDA Forecast")
+st.sidebar.markdown("### 🌱 LFDA Forecast")
 st.sidebar.markdown("<span class='small-muted'>Ambiente local • Streamlit</span>", unsafe_allow_html=True)
 
 page = st.sidebar.radio(
     "Menu",
-    ["Upload", "Validação", "Modelos", "Auditoria", "Forecast", "Exportação"],
+    ["Início", "Upload", "Validação", "Modelos", "Auditoria", "Forecast", "Exportação"],
     index=0,
 )
 
@@ -600,24 +649,11 @@ st.sidebar.caption("Intervalo de confiança: 90%")
 
 
 # =========================================================
-# Upload + processamento global
+# Session State
 # =========================================================
-if "raw_df" not in st.session_state:
-    st.session_state.raw_df = None
-if "monthly" not in st.session_state:
-    st.session_state.monthly = None
-if "quarterly" not in st.session_state:
-    st.session_state.quarterly = None
-if "treated" not in st.session_state:
-    st.session_state.treated = None
-if "summary" not in st.session_state:
-    st.session_state.summary = None
-if "audit" not in st.session_state:
-    st.session_state.audit = None
-if "forecast" not in st.session_state:
-    st.session_state.forecast = None
-if "inferred_cols" not in st.session_state:
-    st.session_state.inferred_cols = None
+for key in ["raw_df", "monthly", "quarterly", "treated", "summary", "audit", "forecast", "inferred_cols"]:
+    if key not in st.session_state:
+        st.session_state[key] = None
 
 
 def process_file(uploaded_file):
@@ -625,17 +661,13 @@ def process_file(uploaded_file):
         raw = pd.read_excel(uploaded_file)
     else:
         raw = pd.read_csv(uploaded_file, sep=None, engine="python")
-
     raw = clean_dataframe(raw)
     product_col, date_col, qty_col = infer_columns(raw)
-
     if product_col is None or date_col is None or qty_col is None:
         raise ValueError("Não foi possível identificar automaticamente as colunas de Produto, Data e Quantidade.")
-
     monthly = prepare_monthly(raw, product_col, date_col, qty_col)
     quarterly = fill_missing_quarters(monthly_to_quarterly(monthly))
     treated, summary, audit, forecast = run_models(quarterly)
-
     st.session_state.raw_df = raw
     st.session_state.monthly = monthly
     st.session_state.quarterly = quarterly
@@ -646,14 +678,137 @@ def process_file(uploaded_file):
     st.session_state.inferred_cols = (product_col, date_col, qty_col)
 
 
-def has_results() -> bool:
+def has_results():
     return st.session_state.summary is not None and not st.session_state.summary.empty
 
 
 # =========================================================
 # Pages
 # =========================================================
-if page == "Upload":
+
+# ----------------------------------------------------------
+# INÍCIO — Capa
+# ----------------------------------------------------------
+if page == "Início":
+    st.markdown("""
+    <div class="capa-hero">
+        <div class="capa-title">🌱 LFDA Forecast</div>
+        <div class="capa-subtitle">Sistema de Previsão de Demanda — LFDA-RS</div>
+        <span class="capa-badge">📊 Modelos estatísticos</span>
+        <span class="capa-badge">🔍 Auditoria completa</span>
+        <span class="capa-badge">📁 Exportação Excel</span>
+        <span class="capa-badge">🔒 Processamento local</span>
+    </div>
+    """, unsafe_allow_html=True)
+
+    col1, col2 = st.columns([3, 2])
+
+    with col1:
+        st.markdown("#### Sobre o sistema")
+        st.markdown("""
+        <div class="info-card">
+            <strong>O que é o LFDA Forecast?</strong><br><br>
+            Uma ferramenta desenvolvida internamente pela LFDA-RS para gerar previsões de demanda
+            de produtos agropecuários com base em histórico mensal. O sistema automatiza todo o processo
+            estatístico — da leitura da planilha até a exportação dos resultados — sem exigir conhecimento
+            de programação do usuário.
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("""
+        <div class="info-card-blue">
+            <strong>Como usar?</strong><br><br>
+            Basta subir uma planilha Excel ou CSV com três colunas: <strong>Produto</strong>, <strong>Data</strong>
+            e <strong>Quantidade</strong>. O sistema faz todo o restante automaticamente.
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col2:
+        st.markdown("#### Modelos disponíveis")
+        st.markdown("""
+        <div class="model-card" style="margin-bottom:10px">
+            <div class="model-title">SES — Simple Exponential Smoothing</div>
+            <div class="model-desc">Ideal para séries sem tendência clara. Usa apenas o nível histórico para projetar o futuro.</div>
+        </div>
+        <div class="model-card" style="margin-bottom:10px">
+            <div class="model-title">Holt — Double Exponential Smoothing</div>
+            <div class="model-desc">Captura tendência de crescimento ou queda. Indicado quando a demanda tem direção definida.</div>
+        </div>
+        <div class="model-card">
+            <div class="model-title">Holt-Winters — Triple Exponential Smoothing</div>
+            <div class="model-desc">Captura tendência e sazonalidade trimestral. Mais completo para produtos com variação sazonal.</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("---")
+    st.markdown("#### Como o sistema funciona — passo a passo")
+
+    st.markdown("""
+    <div class="step-flow">
+        <div class="step-item">
+            <div class="step-circle">1</div>
+            <div class="step-label">Upload</div>
+            <div class="step-desc">Envie o Excel ou CSV com Produto, Data e Quantidade</div>
+        </div>
+        <div class="step-arrow">→</div>
+        <div class="step-item">
+            <div class="step-circle">2</div>
+            <div class="step-label">Validação</div>
+            <div class="step-desc">O sistema identifica colunas e converte datas automaticamente</div>
+        </div>
+        <div class="step-arrow">→</div>
+        <div class="step-item">
+            <div class="step-circle">3</div>
+            <div class="step-label">Trimestral</div>
+            <div class="step-desc">Converte dados mensais em série trimestral internamente</div>
+        </div>
+        <div class="step-arrow">→</div>
+        <div class="step-item">
+            <div class="step-circle">4</div>
+            <div class="step-label">Zeros</div>
+            <div class="step-desc">Trata zeros entre períodos preservando a demanda total</div>
+        </div>
+        <div class="step-arrow">→</div>
+        <div class="step-item">
+            <div class="step-circle">5</div>
+            <div class="step-label">Modelos</div>
+            <div class="step-desc">Roda SES, Holt e Holt-Winters com split adaptativo</div>
+        </div>
+        <div class="step-arrow">→</div>
+        <div class="step-item">
+            <div class="step-circle">6</div>
+            <div class="step-label">Auditoria</div>
+            <div class="step-desc">Calcula MAPE por período e agregado para cada modelo</div>
+        </div>
+        <div class="step-arrow">→</div>
+        <div class="step-item">
+            <div class="step-circle">7</div>
+            <div class="step-label">Forecast</div>
+            <div class="step-desc">Gera previsão dos próximos 4 trimestres com IC 90%</div>
+        </div>
+        <div class="step-arrow">→</div>
+        <div class="step-item">
+            <div class="step-circle">8</div>
+            <div class="step-label">Exportação</div>
+            <div class="step-desc">Baixe tudo em Excel formatado com todas as abas</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("---")
+    st.markdown("#### Formato esperado da planilha")
+    st.dataframe(pd.DataFrame({
+        "Produto": ["Metanol", "Acetonitrila", "Tubo Falcon 15ml"],
+        "Data": ["março de 2026", "março de 2026", "março de 2026"],
+        "Quantidade": [5000, 16000, 1000],
+    }), use_container_width=True)
+    st.markdown("<div class='small-muted'>A base pode ser mensal. O sistema converte para trimestral automaticamente. Datas em português são aceitas.</div>", unsafe_allow_html=True)
+
+
+# ----------------------------------------------------------
+# UPLOAD
+# ----------------------------------------------------------
+elif page == "Upload":
     st.subheader("Upload da base")
     st.markdown("<div class='small-muted'>Envie uma base mensal em Excel ou CSV. O sistema identifica Produto, Data e Quantidade automaticamente.</div>", unsafe_allow_html=True)
     uploaded = st.file_uploader("Arquivo de entrada", type=["xlsx", "xls", "csv"])
@@ -682,6 +837,10 @@ if page == "Upload":
         st.markdown("### Prévia da base original")
         st.dataframe(st.session_state.raw_df.head(30), use_container_width=True)
 
+
+# ----------------------------------------------------------
+# VALIDAÇÃO
+# ----------------------------------------------------------
 elif page == "Validação":
     st.subheader("Validação e conversão mensal → trimestral")
     if st.session_state.monthly is None:
@@ -706,6 +865,10 @@ elif page == "Validação":
         t_view["Diferença Tratamento"] = t_view["Valor Tratado"] - t_view["Quantidade"]
         st.dataframe(t_view, use_container_width=True)
 
+
+# ----------------------------------------------------------
+# MODELOS
+# ----------------------------------------------------------
 elif page == "Modelos":
     st.subheader("Backtest dos modelos")
     if not has_results():
@@ -721,9 +884,13 @@ elif page == "Modelos":
         st.markdown("### Resultado por produto e modelo")
         st.dataframe(summary, use_container_width=True)
 
-        st.markdown("### Melhor modelo por produto — critério atual: menor MAPE agregado")
+        st.markdown("### Melhor modelo por produto — critério: menor MAPE agregado")
         st.dataframe(best, use_container_width=True)
 
+
+# ----------------------------------------------------------
+# AUDITORIA
+# ----------------------------------------------------------
 elif page == "Auditoria":
     st.subheader("Auditoria estatística")
     if st.session_state.audit is None or st.session_state.audit.empty:
@@ -741,6 +908,10 @@ elif page == "Auditoria":
             audit = audit[audit["Modelo"] == model_filter]
         st.dataframe(audit, use_container_width=True)
 
+
+# ----------------------------------------------------------
+# FORECAST
+# ----------------------------------------------------------
 elif page == "Forecast":
     st.subheader("Forecast — próximos 4 trimestres")
     if st.session_state.forecast is None or st.session_state.forecast.empty:
@@ -764,6 +935,10 @@ elif page == "Forecast":
         annual = annual.rename(columns={"IC 90% Superior": "Soma 4T - Limite Superior"})
         st.dataframe(annual, use_container_width=True)
 
+
+# ----------------------------------------------------------
+# EXPORTAÇÃO
+# ----------------------------------------------------------
 elif page == "Exportação":
     st.subheader("Exportação Excel")
     if not has_results():
@@ -780,7 +955,7 @@ elif page == "Exportação":
         }
         excel = to_excel_bytes(sheets)
         st.download_button(
-            label="Baixar resultado em Excel",
+            label="⬇️ Baixar resultado em Excel",
             data=excel,
             file_name="LFDA_Forecast_Resultados.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
