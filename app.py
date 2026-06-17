@@ -93,6 +93,10 @@ h1, h2, h3 { font-family: 'Inter', sans-serif !important; letter-spacing: -0.03e
 .mape-exc { background: #d6f5dd; color: #137a36; }
 .mape-bom { background: #fff4d6; color: #9a6d00; }
 .mape-att { background: #fde0e0; color: #c0392b; }
+
+/* Menu de navegação único */
+[data-testid="stSidebar"] [role="radiogroup"] label { padding: 2px 0; }
+[data-testid="stSidebar"] [role="radiogroup"] label p { font-size: 0.92rem; font-weight: 500; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -438,37 +442,55 @@ def plot_model_comparison(prod, treated_df, forecast_df, best):
 # =========================================================
 # SIDEBAR
 # =========================================================
+# Opções do menu único — separadores visuais (não selecionáveis) entre grupos
+SEP_PRINCIPAL = "—— PRINCIPAL ——"
+SEP_METODOLOGIA = "—— METODOLOGIA ——"
+SEP_RESULTADO = "—— RESULTADO ——"
+MENU_OPTIONS = [
+    SEP_PRINCIPAL, "🏠  Início", "⬆️  Upload", "⬇️  Exportação",
+    SEP_METODOLOGIA, "✅  Validação", "📐  Modelos", "🔍  Auditoria",
+    SEP_RESULTADO, "📊  Forecast",
+]
+SEPARATORS = {SEP_PRINCIPAL, SEP_METODOLOGIA, SEP_RESULTADO}
+
+# Inicializa página ativa
+if "nav_page" not in st.session_state:
+    st.session_state.nav_page = "🏠  Início"
+
+# Redirect automático pós-upload: leva direto ao Forecast
+if st.session_state.get("go_forecast"):
+    st.session_state.nav_page = "📊  Forecast"
+    st.session_state.go_forecast = False
+
 with st.sidebar:
     st.markdown("""<div class="sb-logo"><div class="sb-logo-title">🌱 LFDA Forecast</div><div class="sb-logo-sub">Processamento local · Streamlit</div></div>""", unsafe_allow_html=True)
     st.markdown('<hr class="sb-divider">', unsafe_allow_html=True)
-    st.markdown('<span class="sb-group-label">Principal</span>', unsafe_allow_html=True)
-    page = st.radio("nav_principal", ["🏠  Início", "⬆️  Upload", "⬇️  Exportação"], label_visibility="collapsed")
-    st.markdown('<hr class="sb-divider">', unsafe_allow_html=True)
-    st.markdown('<span class="sb-group-label">Metodologia</span>', unsafe_allow_html=True)
-    page_met = st.radio("nav_met", ["✅  Validação", "📐  Modelos", "🔍  Auditoria"], label_visibility="collapsed")
-    st.markdown('<hr class="sb-divider">', unsafe_allow_html=True)
-    st.markdown('<span class="sb-group-label">Resultado</span>', unsafe_allow_html=True)
-    page_res = st.radio("nav_res", ["📊  Forecast"], label_visibility="collapsed")
 
-    if "last_group" not in st.session_state:
-        st.session_state.last_group = "principal"
-    def resolve_page():
-        groups = {"principal": page, "met": page_met, "res": page_res}
-        prev = st.session_state.get("prev_pages", dict(groups))
-        for g, val in groups.items():
-            if val != prev.get(g):
-                st.session_state.last_group = g
-                break
-        st.session_state.prev_pages = groups
-        return groups[st.session_state.last_group]
-    active_page = resolve_page()
+    def fmt_option(opt):
+        # Separadores aparecem como rótulos de grupo, não como itens clicáveis comuns
+        return opt
+
+    # índice atual
+    try:
+        cur_idx = MENU_OPTIONS.index(st.session_state.nav_page)
+    except ValueError:
+        cur_idx = 1
+
+    selected = st.radio("Menu", MENU_OPTIONS, index=cur_idx,
+                        label_visibility="collapsed", format_func=fmt_option)
+
+    # Se o usuário clicar num separador, ignora e mantém a página anterior
+    if selected in SEPARATORS:
+        selected = st.session_state.nav_page
+    else:
+        st.session_state.nav_page = selected
 
     st.markdown('<hr class="sb-divider">', unsafe_allow_html=True)
     st.markdown("""<div class="sb-config"><div class="sb-config-title">⚙️ Configuração atual</div>Modelos: SES · Holt · Holt-Winters<br>Parâmetros: otimização automática<br>Forecast: 4 trimestres à frente<br>Intervalo de confiança: 90%</div>""", unsafe_allow_html=True)
 
 def page_name(p):
     return p.split("  ")[-1].strip() if "  " in p else p.strip()
-current = page_name(active_page)
+current = page_name(st.session_state.nav_page)
 
 
 # =========================================================
@@ -620,7 +642,9 @@ elif current == "Upload":
     if uploaded is not None:
         try:
             process_file(uploaded)
-            st.success("Base processada com sucesso. Veja os resultados em Forecast.")
+            st.session_state.go_forecast = True
+            st.success("Base processada com sucesso! Redirecionando para o Forecast...")
+            st.rerun()
         except Exception as e:
             st.error(f"Erro ao processar arquivo: {e}")
     if st.session_state.raw_df is not None:
@@ -745,6 +769,26 @@ elif current == "Forecast":
                     <div class="exec-row"><span class="exec-label">Melhor modelo</span><span class="exec-model">{best}</span></div>
                     <div style="margin-top:8px">{mape_badge_html(mape_v)}</div>
                 </div>""", unsafe_allow_html=True)
+
+        st.write("")
+        st.markdown("##### 📅 Previsão por trimestre (melhor modelo de cada produto)")
+        st.markdown("<div class='small-muted'>Quanto de cada produto está previsto para os próximos 4 trimestres.</div>", unsafe_allow_html=True)
+
+        # Monta tabela pivô: linhas = produto, colunas = trimestres futuros
+        rows = []
+        for prod in produtos:
+            best = best_model_for(summary, prod)
+            fc_best = fc_all[(fc_all["Produto"] == prod) & (fc_all["Modelo"] == best)].sort_values("TrimestreData")
+            row = {"Produto": prod, "Modelo": best}
+            for _, r in fc_best.iterrows():
+                row[r["Trimestre"]] = r["Forecast"]
+            row["Total anual"] = fc_best["Forecast"].sum()
+            rows.append(row)
+        pivot = pd.DataFrame(rows)
+        # formata números em PT-BR
+        num_cols = [c for c in pivot.columns if c not in ("Produto", "Modelo")]
+        fmt_dict = {c: (lambda v: fmt_br(v)) for c in num_cols}
+        st.dataframe(pivot.style.format(fmt_dict, na_rep="—"), use_container_width=True)
 
         st.markdown("---")
 
