@@ -403,11 +403,11 @@ def plot_history_forecast(prod, treated_df, forecast_df, model_name):
                                  line=dict(color=C_BLUE, width=3, dash="dash"), marker=dict(size=7, symbol="diamond")))
 
     fig.update_layout(
-        template="plotly_white", height=380, margin=dict(l=10, r=10, t=40, b=10),
+        template="plotly_white", height=420, margin=dict(l=10, r=10, t=95, b=10),
         font=dict(family="Inter, sans-serif", color="#1a2e1a"),
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
         plot_bgcolor="rgba(255,255,255,0)", paper_bgcolor="rgba(255,255,255,0)",
-        title=dict(text=f"{prod} — histórico e previsão", font=dict(size=15, color=C_GREEN)),
+        title=dict(text=f"{prod} — histórico e previsão", font=dict(size=15, color=C_GREEN), y=0.97, yanchor="top"),
         yaxis=dict(title="Quantidade", gridcolor="#e0ece0"), xaxis=dict(title="Trimestre"))
     return fig
 
@@ -430,11 +430,11 @@ def plot_model_comparison(prod, treated_df, forecast_df, best):
                                            dash="solid" if is_best else "dot"),
                                  marker=dict(size=8 if is_best else 5),
                                  opacity=1.0 if is_best else 0.55))
-    fig.update_layout(template="plotly_white", height=380, margin=dict(l=10, r=10, t=40, b=10),
+    fig.update_layout(template="plotly_white", height=420, margin=dict(l=10, r=10, t=95, b=10),
                       font=dict(family="Inter, sans-serif", color="#1a2e1a"),
                       legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
                       plot_bgcolor="rgba(255,255,255,0)", paper_bgcolor="rgba(255,255,255,0)",
-                      title=dict(text=f"{prod} — comparação entre os 3 modelos", font=dict(size=15, color=C_GREEN)),
+                      title=dict(text=f"{prod} — comparação entre os 3 modelos", font=dict(size=15, color=C_GREEN), y=0.97, yanchor="top"),
                       yaxis=dict(title="Quantidade", gridcolor="#e0ece0"), xaxis=dict(title="Trimestre"))
     return fig
 
@@ -442,18 +442,15 @@ def plot_model_comparison(prod, treated_df, forecast_df, best):
 # =========================================================
 # SIDEBAR
 # =========================================================
-# Opções do menu único — separadores visuais (não selecionáveis) entre grupos
-SEP_PRINCIPAL = "—— PRINCIPAL ——"
-SEP_METODOLOGIA = "—— METODOLOGIA ——"
-SEP_RESULTADO = "—— RESULTADO ——"
-MENU_OPTIONS = [
-    SEP_PRINCIPAL, "🏠  Início", "⬆️  Upload", "⬇️  Exportação",
-    SEP_METODOLOGIA, "✅  Validação", "📐  Modelos", "🔍  Auditoria",
-    SEP_RESULTADO, "📊  Forecast",
-]
-SEPARATORS = {SEP_PRINCIPAL, SEP_METODOLOGIA, SEP_RESULTADO}
+# Menu de navegação em grupos. Os títulos (Principal/Metodologia/Resultado)
+# são apenas rótulos de markdown — não são clicáveis. A seleção é única:
+# clicar num item de um grupo desmarca os demais.
+GROUPS = {
+    "Principal": ["🏠  Início", "⬆️  Upload", "⬇️  Exportação"],
+    "Metodologia": ["✅  Validação", "📐  Modelos", "🔍  Auditoria"],
+    "Resultado": ["📊  Forecast"],
+}
 
-# Inicializa página ativa
 if "nav_page" not in st.session_state:
     st.session_state.nav_page = "🏠  Início"
 
@@ -462,30 +459,30 @@ if st.session_state.get("go_forecast"):
     st.session_state.nav_page = "📊  Forecast"
     st.session_state.go_forecast = False
 
+def _on_group_change(group_name):
+    """Quando um grupo recebe seleção, ela vira a página ativa e os demais grupos são limpos."""
+    val = st.session_state.get(f"nav_{group_name}")
+    if val:
+        st.session_state.nav_page = val
+        for other in GROUPS:
+            if other != group_name:
+                st.session_state[f"nav_{other}"] = None
+
 with st.sidebar:
     st.markdown("""<div class="sb-logo"><div class="sb-logo-title">🌱 LFDA Forecast</div><div class="sb-logo-sub">Processamento local · Streamlit</div></div>""", unsafe_allow_html=True)
     st.markdown('<hr class="sb-divider">', unsafe_allow_html=True)
 
-    def fmt_option(opt):
-        # Separadores aparecem como rótulos de grupo, não como itens clicáveis comuns
-        return opt
+    for group_name, items in GROUPS.items():
+        st.markdown(f'<span class="sb-group-label">{group_name}</span>', unsafe_allow_html=True)
+        idx = items.index(st.session_state.nav_page) if st.session_state.nav_page in items else None
+        st.radio(
+            f"nav_{group_name}", items,
+            index=idx, key=f"nav_{group_name}",
+            label_visibility="collapsed",
+            on_change=_on_group_change, args=(group_name,),
+        )
+        st.markdown('<hr class="sb-divider">', unsafe_allow_html=True)
 
-    # índice atual
-    try:
-        cur_idx = MENU_OPTIONS.index(st.session_state.nav_page)
-    except ValueError:
-        cur_idx = 1
-
-    selected = st.radio("Menu", MENU_OPTIONS, index=cur_idx,
-                        label_visibility="collapsed", format_func=fmt_option)
-
-    # Se o usuário clicar num separador, ignora e mantém a página anterior
-    if selected in SEPARATORS:
-        selected = st.session_state.nav_page
-    else:
-        st.session_state.nav_page = selected
-
-    st.markdown('<hr class="sb-divider">', unsafe_allow_html=True)
     st.markdown("""<div class="sb-config"><div class="sb-config-title">⚙️ Configuração atual</div>Modelos: SES · Holt · Holt-Winters<br>Parâmetros: otimização automática<br>Forecast: 4 trimestres à frente<br>Intervalo de confiança: 90%</div>""", unsafe_allow_html=True)
 
 def page_name(p):
