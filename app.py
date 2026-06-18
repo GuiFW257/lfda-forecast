@@ -10,7 +10,7 @@ import plotly.graph_objects as go
 from statsmodels.tsa.holtwinters import SimpleExpSmoothing, Holt, ExponentialSmoothing
 
 
-st.set_page_config(page_title="LFDA Forecast", page_icon="🌱", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="LFDA Forecast", page_icon="📊", layout="wide", initial_sidebar_state="expanded")
 
 # Cores de marca usadas também nos gráficos
 C_GREEN = "#1a6b2f"
@@ -54,12 +54,12 @@ h1, h2, h3 { font-family: 'Inter', sans-serif !important; letter-spacing: -0.03e
 .sb-config { margin: 12px 10px 0 10px; padding: 10px 12px; background: #f4faf4; border: 1px solid var(--border); border-radius: 10px; font-size: 0.75rem; color: var(--muted); line-height: 1.8; }
 .sb-config-title { font-weight: 700; color: var(--green-dark); font-size: 0.78rem; margin-bottom: 4px; }
 
-.capa-hero { background: linear-gradient(135deg, #1a6b2f 0%, #2d8a45 50%, #1e7ec8 100%); border-radius: 20px; padding: 3.2rem 2.8rem; color: white; margin-bottom: 2rem; }
-.capa-title { font-size: 3.2rem; font-weight: 700; letter-spacing: -0.04em; margin-bottom: 0.5rem; color: white; }
-.capa-subtitle { font-size: 1.4rem; font-weight: 500; opacity: 0.95; margin-bottom: 0.4rem; color: white; }
-.capa-inst { font-size: 0.95rem; opacity: 0.75; margin-bottom: 1.5rem; color: white; }
-.capa-context { font-size: 1rem; opacity: 0.92; line-height: 1.7; color: white; max-width: 850px; }
-.capa-prod { display: inline-block; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); border-radius: 8px; padding: 0.25rem 0.7rem; font-size: 0.85rem; font-weight: 600; color: white; margin: 4px 5px 0 0; }
+.capa-hero { background: linear-gradient(135deg, #14532a 0%, #1a6b2f 55%, #195a8f 100%); border-radius: 14px; padding: 2.6rem 2.6rem; color: white; margin-bottom: 1.8rem; border: 1px solid #0f3d1f; }
+.capa-title { font-size: 2.6rem; font-weight: 700; letter-spacing: -0.03em; margin-bottom: 0.4rem; color: white; }
+.capa-subtitle { font-size: 1.2rem; font-weight: 500; opacity: 0.95; margin-bottom: 0.35rem; color: white; }
+.capa-inst { font-size: 0.9rem; opacity: 0.72; margin-bottom: 1.4rem; color: white; }
+.capa-context { font-size: 0.95rem; opacity: 0.9; line-height: 1.7; color: white; max-width: 850px; }
+.capa-prod { display: inline-block; background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.3); border-radius: 6px; padding: 0.22rem 0.65rem; font-size: 0.82rem; font-weight: 500; color: white; margin: 4px 5px 0 0; }
 
 .info-card { background: #fff; border: 1px solid var(--border); border-left: 4px solid var(--green); border-radius: 12px; padding: 1.2rem 1.4rem; margin-bottom: 1rem; color: var(--text); }
 .info-card-blue { background: #fff; border: 1px solid #b3d4ef; border-left: 4px solid var(--blue); border-radius: 12px; padding: 1.2rem 1.4rem; margin-bottom: 1rem; color: var(--text); }
@@ -97,14 +97,33 @@ h1, h2, h3 { font-family: 'Inter', sans-serif !important; letter-spacing: -0.03e
 /* Menu de navegação único */
 [data-testid="stSidebar"] [role="radiogroup"] label { padding: 2px 0; }
 [data-testid="stSidebar"] [role="radiogroup"] label p { font-size: 0.92rem; font-weight: 500; }
+
+/* TOPBAR CORPORATIVA */
+.topbar { display: flex; align-items: center; justify-content: space-between; padding: 0.7rem 0.2rem; margin-bottom: 1.6rem; border-bottom: 1px solid #d4e4d4; }
+.topbar-left { display: flex; align-items: center; gap: 12px; }
+.topbar-mark { display: inline-block; width: 28px; height: 28px; border-radius: 7px; background: linear-gradient(135deg, #1a6b2f 0%, #1e7ec8 100%); }
+.topbar-brand { font-size: 1.15rem; font-weight: 700; color: var(--green-dark); letter-spacing: -0.02em; }
+.topbar-div { color: #c3d4c3; font-weight: 300; }
+.topbar-sub { font-size: 0.92rem; color: var(--muted); font-weight: 400; }
+.topbar-right { font-size: 0.8rem; color: var(--muted); display: flex; align-items: center; }
+
+/* Títulos de página internos */
+.page-title { font-size: 1.4rem; font-weight: 700; color: var(--green-dark); letter-spacing: -0.03em; margin-bottom: 0.2rem; }
+.page-sub { font-size: 0.9rem; color: var(--muted); margin-bottom: 1.2rem; }
 </style>
 """, unsafe_allow_html=True)
 
 st.markdown("""
-<div class="main-header">
-    <div class="main-title">🌱 LFDA Forecast</div>
-    <div class="main-subtitle">Sistema de Previsão de Demanda</div>
-    <div class="navline">Upload • Validação • Modelos • Auditoria • Forecast • Exportação &nbsp;&nbsp;<span class="status-dot"></span>Processamento local</div>
+<div class="topbar">
+    <div class="topbar-left">
+        <span class="topbar-mark"></span>
+        <span class="topbar-brand">LFDA&nbsp;Forecast</span>
+        <span class="topbar-div">|</span>
+        <span class="topbar-sub">Sistema de Previsão de Demanda</span>
+    </div>
+    <div class="topbar-right">
+        <span class="status-dot"></span>Processamento local
+    </div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -446,17 +465,17 @@ def plot_model_comparison(prod, treated_df, forecast_df, best):
 # são apenas rótulos de markdown — não são clicáveis. A seleção é única:
 # clicar num item de um grupo desmarca os demais.
 GROUPS = {
-    "Principal": ["🏠  Início", "⬆️  Upload", "⬇️  Exportação"],
-    "Metodologia": ["✅  Validação", "📐  Modelos", "🔍  Auditoria"],
-    "Resultado": ["📊  Forecast"],
+    "Principal": ["Início", "Upload", "Exportação"],
+    "Metodologia": ["Validação", "Modelos", "Auditoria"],
+    "Resultado": ["Forecast"],
 }
 
 if "nav_page" not in st.session_state:
-    st.session_state.nav_page = "🏠  Início"
+    st.session_state.nav_page = "Início"
 
 # Redirect automático pós-upload: leva direto ao Forecast
 if st.session_state.get("go_forecast"):
-    st.session_state.nav_page = "📊  Forecast"
+    st.session_state.nav_page = "Forecast"
     st.session_state.go_forecast = False
 
 def _on_group_change(group_name):
@@ -469,7 +488,7 @@ def _on_group_change(group_name):
                 st.session_state[f"nav_{other}"] = None
 
 with st.sidebar:
-    st.markdown("""<div class="sb-logo"><div class="sb-logo-title">🌱 LFDA Forecast</div><div class="sb-logo-sub">Processamento local · Streamlit</div></div>""", unsafe_allow_html=True)
+    st.markdown("""<div class="sb-logo"><div class="sb-logo-title">LFDA Forecast</div><div class="sb-logo-sub">Processamento local · Streamlit</div></div>""", unsafe_allow_html=True)
     st.markdown('<hr class="sb-divider">', unsafe_allow_html=True)
 
     for group_name, items in GROUPS.items():
@@ -483,11 +502,9 @@ with st.sidebar:
         )
         st.markdown('<hr class="sb-divider">', unsafe_allow_html=True)
 
-    st.markdown("""<div class="sb-config"><div class="sb-config-title">⚙️ Configuração atual</div>Modelos: SES · Holt · Holt-Winters<br>Parâmetros: otimização automática<br>Forecast: 4 trimestres à frente<br>Intervalo de confiança: 90%</div>""", unsafe_allow_html=True)
+    st.markdown("""<div class="sb-config"><div class="sb-config-title">Configuração atual</div>Modelos: SES · Holt · Holt-Winters<br>Parâmetros: otimização automática<br>Forecast: 4 trimestres à frente<br>Intervalo de confiança: 90%</div>""", unsafe_allow_html=True)
 
-def page_name(p):
-    return p.split("  ")[-1].strip() if "  " in p else p.strip()
-current = page_name(st.session_state.nav_page)
+current = st.session_state.nav_page
 
 
 # =========================================================
@@ -525,7 +542,7 @@ def has_results():
 if current == "Início":
     st.markdown("""
     <div class="capa-hero">
-        <div class="capa-title">🌱 LFDA Forecast</div>
+        <div class="capa-title">LFDA Forecast</div>
         <div class="capa-subtitle">Sistema de Previsão de Demanda de Insumos Agropecuários</div>
         <div class="capa-inst">Desenvolvido por alunos de Engenharia de Produção da UFRGS em parceria com a LFDA-RS</div>
         <div class="capa-context">
@@ -550,22 +567,22 @@ if current == "Início":
         técnico em programação ou estatística.<br><br>
         O sistema automatiza todo o processo: da leitura da planilha até a exportação dos resultados,
         rodando diretamente no navegador sem envio de dados para servidores externos.</div>""", unsafe_allow_html=True)
-        st.markdown("""<div class="info-card-blue"><strong>🎯 Objetivo</strong><br><br>
+        st.markdown("""<div class="info-card-blue"><strong>Objetivo</strong><br><br>
         Gerar previsões trimestrais de demanda para cada produto, comparando três modelos estatísticos
         e indicando automaticamente qual deles melhor se ajusta ao histórico de cada produto — com base
         no menor erro de previsão (MAPE).</div>""", unsafe_allow_html=True)
     with col2:
         st.markdown('<div class="section-title">Equipe</div>', unsafe_allow_html=True)
-        st.markdown("""<div class="info-card-yellow"><strong>🎓 Desenvolvedores</strong><br><br>
+        st.markdown("""<div class="info-card-yellow"><strong>Desenvolvedores</strong><br><br>
         Alunos de graduação em <strong>Engenharia de Produção</strong> da Universidade Federal
         do Rio Grande do Sul (UFRGS), em parceria com a LFDA-RS.<br><br>
         <strong>Instituição:</strong> UFRGS — Porto Alegre, RS<br><strong>Parceiro:</strong> LFDA-RS</div>""", unsafe_allow_html=True)
-        st.markdown("""<div class="info-card"><strong>⚙️ Tecnologias</strong><br><br>
+        st.markdown("""<div class="info-card"><strong>Tecnologias</strong><br><br>
         Python · Streamlit · Pandas · NumPy · Statsmodels · Plotly · XlsxWriter<br><br>
         <strong>Modelos:</strong> SES, Holt e Holt-Winters</div>""", unsafe_allow_html=True)
 
     st.markdown("---")
-    st.markdown('<div class="section-title">📋 Formato da planilha de entrada</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">Formato da planilha de entrada</div>', unsafe_allow_html=True)
     st.markdown("""<div class="info-card-yellow">A planilha deve ter três colunas preenchidas da seguinte forma:<br><br>
     <strong>Coluna B</strong> — Nome do produto &nbsp;|&nbsp; <strong>Coluna C</strong> — Data (mês de referência) &nbsp;|&nbsp; <strong>Coluna D</strong> — Quantidade</div>""", unsafe_allow_html=True)
     st.markdown("**Exemplo:**")
@@ -573,29 +590,29 @@ if current == "Início":
                                "Data": ["março de 2026"] * 5, "Quantidade": [5000, 16000, 1000, 1000, 500]}), use_container_width=True)
 
     st.markdown("---")
-    st.markdown('<div class="section-title">📐 Como funcionam os modelos estatísticos</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">Como funcionam os modelos estatísticos</div>', unsafe_allow_html=True)
     c1, c2, c3 = st.columns(3)
     with c1:
         st.markdown("""<div class="model-card"><div class="model-title">SES — Suavização Exponencial Simples</div>
         <div class="model-desc">Calcula uma <strong>média ponderada do histórico</strong>, dando mais peso aos períodos
         recentes. O parâmetro <strong>Alpha (α)</strong> controla essa ponderação. Projeta um valor constante —
         não captura tendência nem sazonalidade.</div>
-        <div class="model-when">✅ Use quando: demanda oscila sem tendência nem padrão sazonal.</div></div>""", unsafe_allow_html=True)
+        <div class="model-when">Indicado quando: demanda oscila sem tendência nem padrão sazonal.</div></div>""", unsafe_allow_html=True)
     with c2:
         st.markdown("""<div class="model-card"><div class="model-title">Holt — Suavização com Tendência</div>
         <div class="model-desc">Adiciona um <strong>componente de tendência</strong> ao SES, projetando uma linha com
         inclinação. Usa <strong>Alpha (α)</strong> para o nível e <strong>Beta (β)</strong> para a tendência.
         Não captura sazonalidade.</div>
-        <div class="model-when">✅ Use quando: demanda tem crescimento ou queda consistente.</div></div>""", unsafe_allow_html=True)
+        <div class="model-when">Indicado quando: demanda tem crescimento ou queda consistente.</div></div>""", unsafe_allow_html=True)
     with c3:
         st.markdown("""<div class="model-card"><div class="model-title">Holt-Winters — Tendência e Sazonalidade</div>
         <div class="model-desc">O mais completo. Adiciona um <strong>componente sazonal</strong> (ciclo de 4 trimestres).
         Usa <strong>Alpha (α)</strong>, <strong>Beta (β)</strong> e <strong>Gamma (γ)</strong>. Requer ao menos
         8 trimestres de histórico.</div>
-        <div class="model-when">✅ Use quando: demanda tem picos e vales anuais.</div></div>""", unsafe_allow_html=True)
+        <div class="model-when">Indicado quando: demanda tem picos e vales anuais.</div></div>""", unsafe_allow_html=True)
 
     st.markdown("---")
-    st.markdown('<div class="section-title">🗺️ Fluxo completo — passo a passo</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">Fluxo completo — passo a passo</div>', unsafe_allow_html=True)
     st.markdown("""<div class="step-flow">
         <div class="step-item"><div class="step-circle">1</div><div class="step-label">Upload</div><div class="step-desc">Envie o Excel com Produto, Data e Quantidade</div></div>
         <div class="step-arrow">→</div>
@@ -617,7 +634,7 @@ if current == "Início":
     </div>""", unsafe_allow_html=True)
 
     st.markdown("---")
-    st.markdown('<div class="section-title">✂️ Split treino/teste adaptativo</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">Split treino/teste adaptativo</div>', unsafe_allow_html=True)
     st.dataframe(pd.DataFrame({"Histórico disponível": ["17+ trimestres", "12–16 trimestres", "8–11 trimestres", "5–7 trimestres", "3–4 trimestres", "Menos de 3"],
                                "Treino": ["13", "Restante", "Restante", "Restante", "Restante", "Todos"],
                                "Teste": ["4", "4", "3", "2", "1", "0"],
@@ -633,7 +650,7 @@ if current == "Início":
 # UPLOAD
 # =========================================================
 elif current == "Upload":
-    st.subheader("⬆️ Upload da base")
+    st.markdown('<div class="page-title">Upload da base</div><div class="page-sub">Importe a planilha de demanda para processar os modelos.</div>', unsafe_allow_html=True)
     st.markdown("<div class='small-muted'>Envie uma base mensal em Excel ou CSV com as colunas Produto, Data e Quantidade.</div>", unsafe_allow_html=True)
     uploaded = st.file_uploader("Arquivo de entrada", type=["xlsx", "xls", "csv"])
     if uploaded is not None:
@@ -656,14 +673,14 @@ elif current == "Upload":
         st.markdown("### Prévia da base original")
         st.dataframe(st.session_state.raw_df.head(30), use_container_width=True)
     else:
-        st.info("👈 Comece subindo a planilha. Depois acesse **Forecast** para ver as previsões.")
+        st.info("Comece subindo a planilha. Depois acesse a aba Forecast para ver as previsões.")
 
 
 # =========================================================
 # VALIDAÇÃO
 # =========================================================
 elif current == "Validação":
-    st.subheader("✅ Validação e conversão mensal → trimestral")
+    st.markdown('<div class="page-title">Validação</div><div class="page-sub">Conferência da base, conversão mensal → trimestral e tratamento de zeros.</div>', unsafe_allow_html=True)
     if st.session_state.monthly is None:
         st.info("Faça o upload de uma base em **Upload** para visualizar a validação.")
     else:
@@ -688,7 +705,7 @@ elif current == "Validação":
 # MODELOS
 # =========================================================
 elif current == "Modelos":
-    st.subheader("📐 Backtest dos modelos")
+    st.markdown('<div class="page-title">Backtest dos modelos</div><div class="page-sub">Comparação de desempenho entre SES, Holt e Holt-Winters por produto.</div>', unsafe_allow_html=True)
     if not has_results():
         st.info("Faça o upload de uma base em **Upload** para rodar os modelos.")
     else:
@@ -719,7 +736,7 @@ elif current == "Modelos":
 # AUDITORIA
 # =========================================================
 elif current == "Auditoria":
-    st.subheader("🔍 Auditoria estatística")
+    st.markdown('<div class="page-title">Auditoria estatística</div><div class="page-sub">Detalhamento período a período de cada modelo para conferência.</div>', unsafe_allow_html=True)
     if st.session_state.audit is None or st.session_state.audit.empty:
         st.info("Faça o upload de uma base em **Upload** para gerar a auditoria.")
     else:
@@ -736,7 +753,7 @@ elif current == "Auditoria":
 # FORECAST
 # =========================================================
 elif current == "Forecast":
-    st.subheader("📊 Forecast — próximos 4 trimestres")
+    st.markdown('<div class="page-title">Forecast — próximos 4 trimestres</div><div class="page-sub">Previsão de demanda por produto com o melhor modelo de cada série.</div>', unsafe_allow_html=True)
     if st.session_state.forecast is None or st.session_state.forecast.empty:
         st.info("Faça o upload de uma base em **Upload** para gerar o forecast.")
     else:
@@ -768,7 +785,7 @@ elif current == "Forecast":
                 </div>""", unsafe_allow_html=True)
 
         st.write("")
-        st.markdown("##### 📅 Previsão por trimestre (melhor modelo de cada produto)")
+        st.markdown("##### Previsão por trimestre (melhor modelo de cada produto)")
         st.markdown("<div class='small-muted'>Quanto de cada produto está previsto para os próximos 4 trimestres.</div>", unsafe_allow_html=True)
 
         # Monta tabela pivô: linhas = produto, colunas = trimestres futuros
@@ -822,7 +839,7 @@ elif current == "Forecast":
 # EXPORTAÇÃO
 # =========================================================
 elif current == "Exportação":
-    st.subheader("⬇️ Exportação Excel")
+    st.markdown('<div class="page-title">Exportação</div><div class="page-sub">Baixe todos os resultados consolidados em uma planilha Excel.</div>', unsafe_allow_html=True)
     if not has_results():
         st.info("Faça o upload de uma base em **Upload** para habilitar a exportação.")
     else:
@@ -837,7 +854,7 @@ elif current == "Exportação":
             "Forecast": fc_export,
         }
         excel = to_excel_bytes(sheets)
-        st.download_button(label="⬇️ Baixar resultado em Excel", data=excel,
+        st.download_button(label="Baixar resultado em Excel", data=excel,
                            file_name="LFDA_Forecast_Resultados.xlsx",
                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
         st.markdown("<div class='small-muted'>Contém: base original, mensal, trimestral, zeros, MAPE, auditoria e forecast.</div>", unsafe_allow_html=True)
