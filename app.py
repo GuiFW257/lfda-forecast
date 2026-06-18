@@ -477,6 +477,10 @@ if "nav_page" not in st.session_state:
 if st.session_state.get("go_forecast"):
     st.session_state.nav_page = "Forecast"
     st.session_state.go_forecast = False
+    # limpa a seleção de todos os grupos para que apenas "Forecast" apareça marcado
+    for _g in GROUPS:
+        st.session_state[f"nav_{_g}"] = None
+    st.session_state["nav_Resultado"] = "Forecast"
 
 def _on_group_change(group_name):
     """Quando um grupo recebe seleção, ela vira a página ativa e os demais grupos são limpos."""
@@ -491,12 +495,16 @@ with st.sidebar:
     st.markdown("""<div class="sb-logo"><div class="sb-logo-title">LFDA Forecast</div><div class="sb-logo-sub">Processamento local · Streamlit</div></div>""", unsafe_allow_html=True)
     st.markdown('<hr class="sb-divider">', unsafe_allow_html=True)
 
+    # Inicializa as keys dos grupos uma única vez, marcando apenas o grupo da página ativa
+    for _g, _items in GROUPS.items():
+        if f"nav_{_g}" not in st.session_state:
+            st.session_state[f"nav_{_g}"] = st.session_state.nav_page if st.session_state.nav_page in _items else None
+
     for group_name, items in GROUPS.items():
         st.markdown(f'<span class="sb-group-label">{group_name}</span>', unsafe_allow_html=True)
-        idx = items.index(st.session_state.nav_page) if st.session_state.nav_page in items else None
         st.radio(
             f"nav_{group_name}", items,
-            index=idx, key=f"nav_{group_name}",
+            key=f"nav_{group_name}",
             label_visibility="collapsed",
             on_change=_on_group_change, args=(group_name,),
         )
