@@ -27,96 +27,102 @@ st.markdown("""
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 :root {
-    --green: #38b249; --green-dark: #1a6b2f; --green-light: #e8f5e9;
-    --blue: #1e7ec8; --blue-dark: #155fa0; --border: #b2d8b2;
-    --muted: #4a7a4a; --text: #1a2e1a;
-}
-* { font-family: 'Inter', sans-serif !important; }
-.stApp { background: linear-gradient(135deg, #f0f7f0 0%, #f4f9f4 60%, #e8f5e9 100%); color: var(--text); }
-[data-testid="stSidebar"] { background: #ffffff; border-right: 2px solid var(--border); }
-[data-testid="stSidebar"] * { font-family: 'Inter', sans-serif !important; }
+        --green: #2e8b57; --green-dark: #1a6b2f; --green-light: #e8f3ec;
+        --blue: #1e6fb8; --blue-dark: #155290; --blue-light: #e8f0f8;
+        --border: #dce3ea; --border-strong: #c5d0db;
+        --muted: #687989; --text: #1f2d3a; --bg: #f5f7fa; --panel: #ffffff;
+    }
+    * { font-family: 'Inter', sans-serif !important; }
+    .stApp { background: var(--bg); color: var(--text); }
+    .block-container { padding-top: 1.4rem; padding-bottom: 2rem; max-width: 1300px; }
+    [data-testid="stSidebar"] { background: var(--panel); border-right: 1px solid var(--border-strong); }
+    [data-testid="stSidebar"] * { font-family: 'Inter', sans-serif !important; }
+    .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--green); margin-right: 6px; }
+    div[data-testid="stMetric"] { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: .85rem 1rem; box-shadow: none; }
+    div[data-testid="stMetric"] [data-testid="stMetricValue"] { color: var(--text); }
+    div[data-testid="stDataFrame"] { border: 1px solid var(--border); border-radius: 8px; }
+    .stDownloadButton>button { border-radius: 6px; border: 1px solid var(--green-dark); background: var(--green-dark); color: #fff; font-weight: 600; }
+    .stDownloadButton>button:hover { background: var(--green); border-color: var(--green); }
+    h1, h2, h3 { font-family: 'Inter', sans-serif !important; letter-spacing: -0.02em; color: var(--text); }
 
-.main-header { padding: 1.25rem 0 1rem 0; border-bottom: 3px solid var(--green); margin-bottom: 1.4rem; }
-.main-title { font-size: 2.1rem; font-weight: 700; letter-spacing: -0.04em; color: var(--green-dark); margin-bottom: 0.15rem; }
-.main-subtitle { font-size: 1rem; color: var(--muted); font-weight: 400; margin-bottom: 0.45rem; }
-.navline { color: var(--muted); font-size: 0.87rem; }
-.status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--green); margin-right: 6px; box-shadow: 0 0 8px rgba(56,178,73,0.6); }
+    .sb-logo { padding: 1.1rem 0.6rem 0.8rem 0.6rem; border-bottom: 1px solid var(--border); margin-bottom: 0.5rem; }
+    .sb-logo-row { display: flex; align-items: center; gap: 10px; }
+    .sb-logo-mark { width: 30px; height: 30px; border-radius: 7px; background: linear-gradient(135deg, #1a6b2f 0%, #1e6fb8 100%); flex-shrink: 0; }
+    .sb-logo-title { font-size: 1.05rem; font-weight: 700; color: var(--text); letter-spacing: -0.02em; }
+    .sb-logo-sub { font-size: 0.72rem; color: var(--muted); margin-top: 6px; }
+    .sb-group-label { font-size: 0.66rem; font-weight: 700; letter-spacing: 0.12em; color: #9aa8b5; text-transform: uppercase; padding: 0.9rem 0.6rem 0.4rem 0.6rem; display: block; }
 
-div[data-testid="stMetric"] { background: #fff; border: 1px solid var(--border); border-top: 3px solid var(--green); border-radius: 14px; padding: .8rem 1rem; box-shadow: 0 2px 8px rgba(26,107,47,0.07); }
-div[data-testid="stDataFrame"] { border: 1px solid var(--border); border-radius: 12px; }
-.stButton>button, .stDownloadButton>button { border-radius: 10px; border: 2px solid var(--green-dark); background: var(--green-dark); color: #fff; font-weight: 600; }
-.stButton>button:hover, .stDownloadButton>button:hover { background: var(--green); border-color: var(--green); }
-h1, h2, h3 { font-family: 'Inter', sans-serif !important; letter-spacing: -0.03em; color: var(--green-dark); }
+    [data-testid="stSidebar"] .stButton > button {
+        width: 100%; text-align: left; justify-content: flex-start;
+        background: transparent; border: none; color: var(--text);
+        font-size: 0.92rem; font-weight: 500; padding: 0.55rem 0.7rem;
+        border-radius: 7px; border-left: 3px solid transparent; margin: 1px 0;
+        box-shadow: none; transition: background 0.12s;
+    }
+    [data-testid="stSidebar"] .stButton > button:hover { background: #f0f3f7; color: var(--text); }
+    [data-testid="stSidebar"] .stButton > button[kind="primary"] {
+        background: var(--green-light); color: var(--green-dark); font-weight: 600;
+        border-left: 3px solid var(--green-dark);
+    }
+    [data-testid="stSidebar"] .stButton > button[kind="primary"]:hover { background: #ddeee3; }
 
-.sb-logo { padding: 1.2rem 1rem 0.5rem 1rem; }
-.sb-logo-title { font-size: 1.15rem; font-weight: 700; color: var(--green-dark); letter-spacing: -0.03em; }
-.sb-logo-sub { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
-.sb-group-label { font-size: 0.68rem; font-weight: 600; letter-spacing: 0.1em; color: #9ab89a; text-transform: uppercase; padding: 0.9rem 1rem 0.3rem 1rem; display: block; }
-.sb-divider { border: none; border-top: 1px solid #ddeedd; margin: 4px 12px; }
-.sb-config { margin: 12px 10px 0 10px; padding: 10px 12px; background: #f4faf4; border: 1px solid var(--border); border-radius: 10px; font-size: 0.75rem; color: var(--muted); line-height: 1.8; }
-.sb-config-title { font-weight: 700; color: var(--green-dark); font-size: 0.78rem; margin-bottom: 4px; }
+    .sb-config { margin: 14px 4px 0 4px; padding: 11px 12px; background: #f7f9fb; border: 1px solid var(--border); border-radius: 8px; font-size: 0.74rem; color: var(--muted); line-height: 1.8; }
+    .sb-config-title { font-weight: 700; color: var(--text); font-size: 0.76rem; margin-bottom: 4px; }
 
-.capa-hero { background: linear-gradient(135deg, #14532a 0%, #1a6b2f 55%, #195a8f 100%); border-radius: 14px; padding: 2.6rem 2.6rem; color: white; margin-bottom: 1.8rem; border: 1px solid #0f3d1f; }
-.capa-title { font-size: 2.6rem; font-weight: 700; letter-spacing: -0.03em; margin-bottom: 0.4rem; color: white; }
-.capa-subtitle { font-size: 1.2rem; font-weight: 500; opacity: 0.95; margin-bottom: 0.35rem; color: white; }
-.capa-inst { font-size: 0.9rem; opacity: 0.72; margin-bottom: 1.4rem; color: white; }
-.capa-context { font-size: 0.95rem; opacity: 0.9; line-height: 1.7; color: white; max-width: 850px; }
-.capa-prod { display: inline-block; background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.3); border-radius: 6px; padding: 0.22rem 0.65rem; font-size: 0.82rem; font-weight: 500; color: white; margin: 4px 5px 0 0; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; padding: 0.6rem 1.1rem; margin-bottom: 1.3rem; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; }
+    .topbar-left { display: flex; align-items: center; gap: 12px; }
+    .topbar-mark { display: inline-block; width: 26px; height: 26px; border-radius: 6px; background: linear-gradient(135deg, #1a6b2f 0%, #1e6fb8 100%); }
+    .topbar-brand { font-size: 1.05rem; font-weight: 700; color: var(--text); letter-spacing: -0.02em; }
+    .topbar-div { color: var(--border-strong); font-weight: 300; }
+    .topbar-sub { font-size: 0.9rem; color: var(--muted); font-weight: 400; }
+    .topbar-right { font-size: 0.8rem; color: var(--muted); display: flex; align-items: center; }
 
-.info-card { background: #fff; border: 1px solid var(--border); border-left: 4px solid var(--green); border-radius: 12px; padding: 1.2rem 1.4rem; margin-bottom: 1rem; color: var(--text); }
-.info-card-blue { background: #fff; border: 1px solid #b3d4ef; border-left: 4px solid var(--blue); border-radius: 12px; padding: 1.2rem 1.4rem; margin-bottom: 1rem; color: var(--text); }
-.info-card-yellow { background: #fffef5; border: 1px solid #e8d88a; border-left: 4px solid #d4a017; border-radius: 12px; padding: 1.2rem 1.4rem; margin-bottom: 1rem; color: var(--text); }
+    .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 1.4rem 1.6rem; margin-bottom: 1.1rem; }
+    .panel-title { font-size: 1.05rem; font-weight: 700; color: var(--text); margin-bottom: 0.3rem; }
 
-.model-card { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 1.1rem 1.3rem; margin-bottom: 10px; }
-.model-title { font-size: 0.95rem; font-weight: 700; color: var(--green-dark); margin-bottom: 0.4rem; }
-.model-desc { font-size: 0.83rem; color: var(--muted); line-height: 1.6; }
-.model-when { font-size: 0.78rem; color: var(--blue-dark); margin-top: 0.4rem; font-weight: 500; }
+    .page-title { font-size: 1.35rem; font-weight: 700; color: var(--text); letter-spacing: -0.02em; margin-bottom: 0.2rem; }
+    .page-sub { font-size: 0.9rem; color: var(--muted); margin-bottom: 1.2rem; }
+    .section-title { font-size: 1.05rem; font-weight: 700; color: var(--text); margin: 1.4rem 0 0.7rem 0; padding-bottom: 0.4rem; border-bottom: 2px solid var(--green); display: inline-block; }
 
-.step-flow { display: flex; align-items: flex-start; gap: 0; margin: 1.5rem 0; flex-wrap: wrap; }
-.step-item { display: flex; flex-direction: column; align-items: center; min-width: 90px; flex: 1; }
-.step-circle { width: 48px; height: 48px; border-radius: 50%; background: var(--green-dark); color: white; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem; }
-.step-label { font-size: 0.77rem; font-weight: 700; color: var(--green-dark); text-align: center; }
-.step-desc { font-size: 0.7rem; color: var(--muted); text-align: center; margin-top: 3px; line-height: 1.4; }
-.step-arrow { font-size: 1.4rem; color: var(--border); margin-top: 12px; padding: 0 2px; flex: 0; }
+    .capa-head { background: var(--panel); border: 1px solid var(--border); border-left: 4px solid var(--green); border-radius: 8px; padding: 1.8rem 2rem; margin-bottom: 1.2rem; }
+    .capa-title { font-size: 1.9rem; font-weight: 700; letter-spacing: -0.03em; color: var(--text); margin-bottom: 0.3rem; }
+    .capa-subtitle { font-size: 1.05rem; font-weight: 500; color: var(--green-dark); margin-bottom: 0.3rem; }
+    .capa-inst { font-size: 0.88rem; color: var(--muted); margin-bottom: 1rem; }
+    .capa-context { font-size: 0.92rem; color: var(--text); line-height: 1.7; max-width: 880px; }
+    .capa-prod { display: inline-block; background: var(--green-light); border: 1px solid #cfe3d6; border-radius: 5px; padding: 0.2rem 0.6rem; font-size: 0.8rem; font-weight: 600; color: var(--green-dark); margin: 5px 5px 0 0; }
 
-.section-title { font-size: 1.15rem; font-weight: 700; color: var(--green-dark); margin: 1.5rem 0 0.8rem 0; border-left: 4px solid var(--green); padding-left: 10px; }
-.small-muted { color: var(--muted); font-size: .88rem; }
+    .info-card { background: var(--panel); border: 1px solid var(--border); border-left: 3px solid var(--green); border-radius: 7px; padding: 1.1rem 1.3rem; margin-bottom: 0.9rem; color: var(--text); font-size: 0.9rem; line-height: 1.6; }
+    .info-card-blue { background: var(--panel); border: 1px solid var(--border); border-left: 3px solid var(--blue); border-radius: 7px; padding: 1.1rem 1.3rem; margin-bottom: 0.9rem; color: var(--text); font-size: 0.9rem; line-height: 1.6; }
+    .info-card-yellow { background: #fffdf6; border: 1px solid #ece2c0; border-left: 3px solid #c79a1e; border-radius: 7px; padding: 1.1rem 1.3rem; margin-bottom: 0.9rem; color: var(--text); font-size: 0.9rem; line-height: 1.6; }
 
-/* Resumo executivo */
-.exec-card { background: #fff; border: 1px solid var(--border); border-radius: 16px; padding: 1.3rem 1.5rem; margin-bottom: 12px; box-shadow: 0 3px 12px rgba(26,107,47,0.08); }
-.exec-prod { font-size: 1.15rem; font-weight: 700; color: var(--green-dark); margin-bottom: 0.6rem; }
-.exec-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.3rem; }
-.exec-label { font-size: 0.82rem; color: var(--muted); }
-.exec-value { font-size: 1.05rem; font-weight: 600; color: var(--text); }
-.exec-model { display: inline-block; background: var(--green-light); color: var(--green-dark); font-size: 0.78rem; font-weight: 600; padding: 0.2rem 0.7rem; border-radius: 20px; }
+    .model-card { background: var(--panel); border: 1px solid var(--border); border-radius: 7px; padding: 1.1rem 1.3rem; margin-bottom: 10px; height: 100%; }
+    .model-title { font-size: 0.92rem; font-weight: 700; color: var(--text); margin-bottom: 0.4rem; }
+    .model-desc { font-size: 0.82rem; color: var(--muted); line-height: 1.6; }
+    .model-when { font-size: 0.78rem; color: var(--blue-dark); margin-top: 0.4rem; font-weight: 500; }
 
-/* Selo MAPE */
-.mape-badge { display: inline-block; font-size: 0.72rem; font-weight: 600; padding: 0.15rem 0.6rem; border-radius: 20px; }
-.mape-exc { background: #d6f5dd; color: #137a36; }
-.mape-bom { background: #fff4d6; color: #9a6d00; }
-.mape-att { background: #fde0e0; color: #c0392b; }
+    .step-flow { display: flex; align-items: flex-start; gap: 0; margin: 1.2rem 0; flex-wrap: wrap; }
+    .step-item { display: flex; flex-direction: column; align-items: center; min-width: 90px; flex: 1; }
+    .step-circle { width: 42px; height: 42px; border-radius: 8px; background: var(--green-dark); color: white; display: flex; align-items: center; justify-content: center; font-size: 1rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .step-label { font-size: 0.76rem; font-weight: 700; color: var(--text); text-align: center; }
+    .step-desc { font-size: 0.7rem; color: var(--muted); text-align: center; margin-top: 3px; line-height: 1.4; }
+    .step-arrow { font-size: 1.2rem; color: var(--border-strong); margin-top: 10px; padding: 0 2px; flex: 0; }
 
-/* Selo de granularidade */
-.gran-badge { display: inline-block; font-size: 0.72rem; font-weight: 600; padding: 0.15rem 0.6rem; border-radius: 20px; }
-.gran-mensal { background: #e3f0fb; color: #1260a8; }
-.gran-trim { background: #ede3fb; color: #6a3da8; }
+    .small-muted { color: var(--muted); font-size: .88rem; }
 
-/* Menu de navegação único */
-[data-testid="stSidebar"] [role="radiogroup"] label { padding: 2px 0; }
-[data-testid="stSidebar"] [role="radiogroup"] label p { font-size: 0.92rem; font-weight: 500; }
+    .exec-card { background: var(--panel); border: 1px solid var(--border); border-top: 3px solid var(--green); border-radius: 8px; padding: 1.2rem 1.4rem; margin-bottom: 12px; }
+    .exec-prod { font-size: 1.08rem; font-weight: 700; color: var(--text); margin-bottom: 0.7rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border); }
+    .exec-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.35rem; }
+    .exec-label { font-size: 0.82rem; color: var(--muted); }
+    .exec-value { font-size: 1.05rem; font-weight: 700; color: var(--text); }
+    .exec-model { display: inline-block; background: var(--green-light); color: var(--green-dark); font-size: 0.78rem; font-weight: 600; padding: 0.2rem 0.7rem; border-radius: 5px; }
 
-/* TOPBAR CORPORATIVA */
-.topbar { display: flex; align-items: center; justify-content: space-between; padding: 0.7rem 0.2rem; margin-bottom: 1.6rem; border-bottom: 1px solid #d4e4d4; }
-.topbar-left { display: flex; align-items: center; gap: 12px; }
-.topbar-mark { display: inline-block; width: 28px; height: 28px; border-radius: 7px; background: linear-gradient(135deg, #1a6b2f 0%, #1e7ec8 100%); }
-.topbar-brand { font-size: 1.15rem; font-weight: 700; color: var(--green-dark); letter-spacing: -0.02em; }
-.topbar-div { color: #c3d4c3; font-weight: 300; }
-.topbar-sub { font-size: 0.92rem; color: var(--muted); font-weight: 400; }
-.topbar-right { font-size: 0.8rem; color: var(--muted); display: flex; align-items: center; }
-
-/* Títulos de página internos */
-.page-title { font-size: 1.4rem; font-weight: 700; color: var(--green-dark); letter-spacing: -0.03em; margin-bottom: 0.2rem; }
-.page-sub { font-size: 0.9rem; color: var(--muted); margin-bottom: 1.2rem; }
+    .mape-badge { display: inline-block; font-size: 0.72rem; font-weight: 600; padding: 0.15rem 0.6rem; border-radius: 5px; }
+    .mape-exc { background: #d6f0de; color: #137a36; }
+    .mape-bom { background: #faf0d2; color: #8a6200; }
+    .mape-att { background: #f8dcdc; color: #b03030; }
+    .gran-badge { display: inline-block; font-size: 0.72rem; font-weight: 600; padding: 0.15rem 0.6rem; border-radius: 5px; }
+    .gran-mensal { background: var(--blue-light); color: var(--blue-dark); }
+    .gran-trim { background: #efe6f7; color: #6a3da8; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -572,42 +578,30 @@ GROUPS = {
 if "nav_page" not in st.session_state:
     st.session_state.nav_page = "Início"
 
-# Redirect automático pós-upload: leva direto ao Forecast
+# Redirect automático pós-upload: leva direto aos resultados
 if st.session_state.get("go_forecast"):
     st.session_state.nav_page = "Resultados mais significativos"
     st.session_state.go_forecast = False
-    # limpa a seleção de todos os grupos para que apenas a aba de resultados apareça marcada
-    for _g in GROUPS:
-        st.session_state[f"nav_{_g}"] = None
-    st.session_state["nav_Previsão de Demanda"] = "Resultados mais significativos"
-
-def _on_group_change(group_name):
-    """Quando um grupo recebe seleção, ela vira a página ativa e os demais grupos são limpos."""
-    val = st.session_state.get(f"nav_{group_name}")
-    if val:
-        st.session_state.nav_page = val
-        for other in GROUPS:
-            if other != group_name:
-                st.session_state[f"nav_{other}"] = None
 
 with st.sidebar:
-    st.markdown("""<div class="sb-logo"><div class="sb-logo-title">LFDA Forecast</div><div class="sb-logo-sub">Processamento local · Streamlit</div></div>""", unsafe_allow_html=True)
-    st.markdown('<hr class="sb-divider">', unsafe_allow_html=True)
-
-    # Inicializa as keys dos grupos uma única vez, marcando apenas o grupo da página ativa
-    for _g, _items in GROUPS.items():
-        if f"nav_{_g}" not in st.session_state:
-            st.session_state[f"nav_{_g}"] = st.session_state.nav_page if st.session_state.nav_page in _items else None
+    st.markdown("""
+    <div class="sb-logo">
+        <div class="sb-logo-row">
+            <div class="sb-logo-mark"></div>
+            <div class="sb-logo-title">LFDA Forecast</div>
+        </div>
+        <div class="sb-logo-sub">Sistema de Previsão de Demanda</div>
+    </div>
+    """, unsafe_allow_html=True)
 
     for group_name, items in GROUPS.items():
         st.markdown(f'<span class="sb-group-label">{group_name}</span>', unsafe_allow_html=True)
-        st.radio(
-            f"nav_{group_name}", items,
-            key=f"nav_{group_name}",
-            label_visibility="collapsed",
-            on_change=_on_group_change, args=(group_name,),
-        )
-        st.markdown('<hr class="sb-divider">', unsafe_allow_html=True)
+        for item in items:
+            is_active = (st.session_state.nav_page == item)
+            if st.button(item, key=f"navbtn_{item}", use_container_width=True,
+                         type="primary" if is_active else "secondary"):
+                st.session_state.nav_page = item
+                st.rerun()
 
     st.markdown("""<div class="sb-config"><div class="sb-config-title">Configuração atual</div>Modelos: SES · Holt · Holt-Winters<br>Parâmetros: otimização automática<br>Granularidade: mensal e trimestral (auto)<br>Horizonte: 1 ano à frente<br>Intervalo de confiança: 90%</div>""", unsafe_allow_html=True)
 
@@ -649,7 +643,7 @@ def has_results():
 # =========================================================
 if current == "Início":
     st.markdown("""
-    <div class="capa-hero">
+    <div class="capa-head">
         <div class="capa-title">LFDA Forecast</div>
         <div class="capa-subtitle">Sistema de Previsão de Demanda de Insumos Agropecuários</div>
         <div class="capa-inst">Desenvolvido por alunos de Engenharia de Produção da UFRGS em parceria com a LFDA-RS</div>
@@ -765,7 +759,7 @@ elif current == "Upload":
         try:
             process_file(uploaded)
             st.session_state.go_forecast = True
-            st.success("Base processada com sucesso! Redirecionando para o Forecast...")
+            st.success("Base processada com sucesso! Redirecionando para os resultados...")
             st.rerun()
         except Exception as e:
             st.error(f"Erro ao processar arquivo: {e}")
