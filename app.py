@@ -566,8 +566,7 @@ def plot_model_comparison(prod, gran, best_model, treated_q_df, treated_m_df, fo
 # clicar num item de um grupo desmarca os demais.
 GROUPS = {
     "Principal": ["Início", "Upload", "Exportação"],
-    "Metodologia": ["Validação", "Modelos", "Auditoria"],
-    "Resultado": ["Forecast"],
+    "Previsão de Demanda": ["Resultados mais significativos", "Resultados abrangentes"],
 }
 
 if "nav_page" not in st.session_state:
@@ -575,12 +574,12 @@ if "nav_page" not in st.session_state:
 
 # Redirect automático pós-upload: leva direto ao Forecast
 if st.session_state.get("go_forecast"):
-    st.session_state.nav_page = "Forecast"
+    st.session_state.nav_page = "Resultados mais significativos"
     st.session_state.go_forecast = False
-    # limpa a seleção de todos os grupos para que apenas "Forecast" apareça marcado
+    # limpa a seleção de todos os grupos para que apenas a aba de resultados apareça marcada
     for _g in GROUPS:
         st.session_state[f"nav_{_g}"] = None
-    st.session_state["nav_Resultado"] = "Forecast"
+    st.session_state["nav_Previsão de Demanda"] = "Resultados mais significativos"
 
 def _on_group_change(group_name):
     """Quando um grupo recebe seleção, ela vira a página ativa e os demais grupos são limpos."""
@@ -786,48 +785,47 @@ elif current == "Upload":
 
 
 # =========================================================
-# VALIDAÇÃO
+# RESULTADOS ABRANGENTES (Validação + Modelos + Auditoria)
 # =========================================================
-elif current == "Validação":
-    st.markdown('<div class="page-title">Validação</div><div class="page-sub">Conferência da base, conversão mensal → trimestral e tratamento de zeros.</div>', unsafe_allow_html=True)
-    if st.session_state.monthly is None:
-        st.info("Faça o upload de uma base em **Upload** para visualizar a validação.")
+elif current == "Resultados abrangentes":
+    st.markdown('<div class="page-title">Resultados abrangentes</div><div class="page-sub">Detalhamento completo do processamento: base e tratamento, comparação de modelos e auditoria estatística período a período.</div>', unsafe_allow_html=True)
+    if st.session_state.monthly is None or not has_results():
+        st.info("Faça o upload de uma base em **Upload** para visualizar os resultados abrangentes.")
     else:
+        # ---------------- SEÇÃO 1: BASE E TRATAMENTO ----------------
+        st.markdown('<div class="section-title">1. Base e tratamento dos dados</div>', unsafe_allow_html=True)
         c1, c2, c3 = st.columns(3)
         c1.metric("Registros mensais", fmt_br(len(st.session_state.monthly)))
         c2.metric("Registros trimestrais", fmt_br(len(st.session_state.quarterly)))
         c3.metric("Demanda total", fmt_br(st.session_state.monthly['Quantidade'].sum()))
-        st.markdown("### Base mensal padronizada")
+
+        st.markdown("##### Base mensal padronizada")
         st.dataframe(st.session_state.monthly, use_container_width=True)
-        st.markdown("### Base trimestral")
+
+        st.markdown("##### Base trimestral")
         q_view = st.session_state.quarterly.copy()
         q_view["Trimestre"] = q_view["Periodo"].apply(quarter_label)
-        q_view = q_view[["Produto", "Trimestre", "Quantidade"]]
-        st.dataframe(q_view, use_container_width=True)
-        st.markdown("### Tratamento dos zeros (série trimestral)")
+        st.dataframe(q_view[["Produto", "Trimestre", "Quantidade"]], use_container_width=True)
+
+        st.markdown("##### Tratamento dos zeros — série trimestral")
         if st.session_state.treated_q is not None and not st.session_state.treated_q.empty:
             t_view = st.session_state.treated_q.copy()
             t_view["Trimestre"] = t_view["Periodo"].apply(quarter_label)
             t_view["Diferença"] = t_view["Valor Tratado"] - t_view["Quantidade"]
             st.dataframe(t_view[["Produto", "Trimestre", "Quantidade", "Valor Tratado", "Diferença"]], use_container_width=True)
-        st.markdown("### Tratamento dos zeros (série mensal)")
+
+        st.markdown("##### Tratamento dos zeros — série mensal")
         if st.session_state.treated_m is not None and not st.session_state.treated_m.empty:
             tm_view = st.session_state.treated_m.copy()
             tm_view["Mês"] = tm_view["Periodo"].apply(month_label)
             tm_view["Diferença"] = tm_view["Valor Tratado"] - tm_view["Quantidade"]
             st.dataframe(tm_view[["Produto", "Mês", "Quantidade", "Valor Tratado", "Diferença"]], use_container_width=True)
 
+        st.markdown("---")
 
-# =========================================================
-# MODELOS
-# =========================================================
-elif current == "Modelos":
-    st.markdown('<div class="page-title">Backtest dos modelos</div><div class="page-sub">Comparação de desempenho entre modelos e granularidades (mensal e trimestral) por produto.</div>', unsafe_allow_html=True)
-    if not has_results():
-        st.info("Faça o upload de uma base em **Upload** para rodar os modelos.")
-    else:
+        # ---------------- SEÇÃO 2: COMPARAÇÃO DE MODELOS ----------------
+        st.markdown('<div class="section-title">2. Comparação de modelos e granularidades</div>', unsafe_allow_html=True)
         summary = st.session_state.summary.copy()
-        # melhor combinação (granularidade + modelo) por produto
         best_rows = []
         for prod in sorted(summary["Produto"].unique()):
             gran, model, mape = best_combo_for(summary, prod)
@@ -839,7 +837,7 @@ elif current == "Modelos":
         c2.metric("Combinações testadas", len(summary))
         c3.metric("MAPE agregado mediano", f"{summary['MAPE Agregado %'].median():.1f}%" if summary["MAPE Agregado %"].notna().any() else "n/a")
 
-        st.markdown("### Resultado por produto, granularidade e modelo")
+        st.markdown("##### Resultado por produto, granularidade e modelo")
         best_keys = set(zip(best["Produto"], best["Granularidade"], best["Modelo"]))
         def highlight_best(row):
             is_best = (row["Produto"], row["Granularidade"], row["Modelo"]) in best_keys
@@ -850,36 +848,32 @@ elif current == "Modelos":
         st.dataframe(styled, use_container_width=True)
         st.caption("Linhas em verde: a melhor combinação de granularidade + modelo de cada produto (menor MAPE agregado).")
 
-        st.markdown("### Melhor combinação por produto")
+        st.markdown("##### Melhor combinação por produto")
         best_show = best.copy()
         best_show["MAPE Agregado %"] = best_show["MAPE Agregado %"].apply(lambda v: f"{v:.1f}" if pd.notna(v) else "—")
         st.dataframe(best_show, use_container_width=True)
 
+        st.markdown("---")
 
-# =========================================================
-# AUDITORIA
-# =========================================================
-elif current == "Auditoria":
-    st.markdown('<div class="page-title">Auditoria estatística</div><div class="page-sub">Detalhamento período a período de cada modelo e granularidade para conferência.</div>', unsafe_allow_html=True)
-    if st.session_state.audit is None or st.session_state.audit.empty:
-        st.info("Faça o upload de uma base em **Upload** para gerar a auditoria.")
-    else:
-        audit = st.session_state.audit.copy()
-        c1, c2, c3 = st.columns(3)
-        prod_filter = c1.selectbox("Produto", ["Todos"] + sorted(audit["Produto"].unique().tolist()))
-        gran_filter = c2.selectbox("Granularidade", ["Todas"] + sorted(audit["Granularidade"].unique().tolist()))
-        model_filter = c3.selectbox("Modelo", ["Todos"] + sorted(audit["Modelo"].unique().tolist()))
-        if prod_filter != "Todos": audit = audit[audit["Produto"] == prod_filter]
-        if gran_filter != "Todas": audit = audit[audit["Granularidade"] == gran_filter]
-        if model_filter != "Todos": audit = audit[audit["Modelo"] == model_filter]
-        st.dataframe(audit, use_container_width=True)
+        # ---------------- SEÇÃO 3: AUDITORIA ----------------
+        st.markdown('<div class="section-title">3. Auditoria estatística período a período</div>', unsafe_allow_html=True)
+        if st.session_state.audit is not None and not st.session_state.audit.empty:
+            audit = st.session_state.audit.copy()
+            c1, c2, c3 = st.columns(3)
+            prod_filter = c1.selectbox("Produto", ["Todos"] + sorted(audit["Produto"].unique().tolist()), key="aud_prod")
+            gran_filter = c2.selectbox("Granularidade", ["Todas"] + sorted(audit["Granularidade"].unique().tolist()), key="aud_gran")
+            model_filter = c3.selectbox("Modelo", ["Todos"] + sorted(audit["Modelo"].unique().tolist()), key="aud_model")
+            if prod_filter != "Todos": audit = audit[audit["Produto"] == prod_filter]
+            if gran_filter != "Todas": audit = audit[audit["Granularidade"] == gran_filter]
+            if model_filter != "Todos": audit = audit[audit["Modelo"] == model_filter]
+            st.dataframe(audit.drop(columns=["PeriodoData"], errors="ignore"), use_container_width=True)
 
 
 # =========================================================
 # FORECAST
 # =========================================================
-elif current == "Forecast":
-    st.markdown('<div class="page-title">Forecast — previsão de demanda</div><div class="page-sub">O sistema testa cada produto em escala mensal e trimestral e escolhe automaticamente a melhor combinação de modelo e granularidade.</div>', unsafe_allow_html=True)
+elif current == "Resultados mais significativos":
+    st.markdown('<div class="page-title">Resultados mais significativos</div><div class="page-sub">Previsão de demanda por produto. O sistema testa cada produto em escala mensal e trimestral e escolhe automaticamente a melhor combinação de modelo e granularidade.</div>', unsafe_allow_html=True)
     if st.session_state.forecast is None or st.session_state.forecast.empty:
         st.info("Faça o upload de uma base em **Upload** para gerar o forecast.")
     else:
