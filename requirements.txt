@@ -4,4 +4,4 @@ numpy
 statsmodels
 openpyxl
 xlsxwriter
-plotly
+plotly>=5.21
