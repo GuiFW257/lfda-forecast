@@ -530,7 +530,8 @@ def plot_history_forecast(prod, gran, model_name, treated_q_df, treated_m_df, fo
         fc_x = [last_x] + [label_func(t) for t in fc["PeriodoData"]]
         fc_y = [last_y] + fc["Forecast"].tolist()
         # desenha faixas do mais largo (99%) ao mais estreito (80%), para sobreposição correta
-        opac = {80: 0.30, 85: 0.24, 90: 0.18, 95: 0.12, 99: 0.07}
+        # opacidades com saltos maiores e base mais forte, para não sumirem no fundo
+        opac = {80: 0.55, 85: 0.42, 90: 0.30, 95: 0.19, 99: 0.10}
         for lvl in sorted(IC_LEVELS, reverse=True):
             up = [last_y] + fc[f"IC {lvl}% Superior"].tolist()
             lo = [last_y] + fc[f"IC {lvl}% Inferior"].tolist()
@@ -538,8 +539,8 @@ def plot_history_forecast(prod, gran, model_name, treated_q_df, treated_m_df, fo
             fig.add_trace(go.Scatter(
                 x=fc_x + fc_x[::-1], y=up + lo[::-1], fill="toself",
                 fillcolor=f"rgba(30,111,184,{opac[lvl]})",
-                line=dict(color="rgba(30,111,184,0.7)" if is_dest else "rgba(0,0,0,0)",
-                          width=1.5 if is_dest else 0, dash="dot" if is_dest else "solid"),
+                line=dict(color="rgba(12,68,124,0.95)" if is_dest else "rgba(0,0,0,0)",
+                          width=2 if is_dest else 0, dash="dash" if is_dest else "solid"),
                 name=f"IC {lvl}%" + (" (selecionado)" if is_dest else ""), hoverinfo="skip"))
     # histórico
     fig.add_trace(go.Scatter(x=hist_x, y=hist["Valor Tratado"],
