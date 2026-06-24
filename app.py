@@ -515,8 +515,18 @@ def plot_history_forecast(prod, gran, model_name, treated_q_df, treated_m_df, fo
     fig = go.Figure()
     if hist.empty:
         return fig
+
+    hist_x = [label_func(t) for t in hist["Periodo"]]
+    # ordem cronológica completa do eixo X (histórico depois forecast)
+    full_order = list(hist_x)
     if not fc.empty:
-        last_x = label_func(hist["Periodo"].iloc[-1]); last_y = hist["Valor Tratado"].iloc[-1]
+        for t in fc["PeriodoData"]:
+            lbl = label_func(t)
+            if lbl not in full_order:
+                full_order.append(lbl)
+
+    if not fc.empty:
+        last_x = hist_x[-1]; last_y = hist["Valor Tratado"].iloc[-1]
         fc_x = [last_x] + [label_func(t) for t in fc["PeriodoData"]]
         fc_y = [last_y] + fc["Forecast"].tolist()
         # desenha faixas do mais largo (99%) ao mais estreito (80%), para sobreposição correta
@@ -532,7 +542,7 @@ def plot_history_forecast(prod, gran, model_name, treated_q_df, treated_m_df, fo
                           width=1.5 if is_dest else 0, dash="dot" if is_dest else "solid"),
                 name=f"IC {lvl}%" + (" (selecionado)" if is_dest else ""), hoverinfo="skip"))
     # histórico
-    fig.add_trace(go.Scatter(x=[label_func(t) for t in hist["Periodo"]], y=hist["Valor Tratado"],
+    fig.add_trace(go.Scatter(x=hist_x, y=hist["Valor Tratado"],
                              mode="lines+markers", name="Histórico", line=dict(color=C_GREEN, width=3), marker=dict(size=6)))
     if not fc.empty:
         fig.add_trace(go.Scatter(x=fc_x, y=fc_y, mode="lines+markers", name=f"Forecast ({model_name})",
@@ -543,7 +553,8 @@ def plot_history_forecast(prod, gran, model_name, treated_q_df, treated_m_df, fo
                       legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
                       plot_bgcolor="rgba(255,255,255,0)", paper_bgcolor="rgba(255,255,255,0)",
                       title=dict(text=f"{prod} — histórico e previsão ({gran.lower()})", font=dict(size=15, color=C_GREEN), y=0.98, yanchor="top"),
-                      yaxis=dict(title="Quantidade", gridcolor="#e0ece0"), xaxis=dict(title=eixo))
+                      yaxis=dict(title="Quantidade", gridcolor="#e0ece0"),
+                      xaxis=dict(title=eixo, type="category", categoryorder="array", categoryarray=full_order))
     return fig
 
 def plot_model_comparison(prod, gran, best_model, treated_q_df, treated_m_df, forecast_df):
@@ -552,15 +563,21 @@ def plot_model_comparison(prod, gran, best_model, treated_q_df, treated_m_df, fo
     fig = go.Figure()
     if hist.empty:
         return fig
-    fig.add_trace(go.Scatter(x=[label_func(t) for t in hist["Periodo"]], y=hist["Valor Tratado"],
+    hist_x = [label_func(t) for t in hist["Periodo"]]
+    full_order = list(hist_x)
+    fig.add_trace(go.Scatter(x=hist_x, y=hist["Valor Tratado"],
                              mode="lines+markers", name="Histórico", line=dict(color=C_GREEN, width=3), marker=dict(size=5)))
-    last_x = label_func(hist["Periodo"].iloc[-1]); last_y = hist["Valor Tratado"].iloc[-1]
+    last_x = hist_x[-1]; last_y = hist["Valor Tratado"].iloc[-1]
     models_here = forecast_df[(forecast_df["Produto"] == prod) & (forecast_df["Granularidade"] == gran)]["Modelo"].unique()
     palette = ["#1e7ec8", "#d4a017", "#9b59b6", "#e67e22", "#16a085"]
     for i, model_name in enumerate(sorted(models_here)):
         fc = forecast_df[(forecast_df["Produto"] == prod) & (forecast_df["Granularidade"] == gran) &
                          (forecast_df["Modelo"] == model_name)].sort_values("PeriodoData")
         if fc.empty: continue
+        for t in fc["PeriodoData"]:
+            lbl = label_func(t)
+            if lbl not in full_order:
+                full_order.append(lbl)
         fc_x = [last_x] + [label_func(t) for t in fc["PeriodoData"]]
         fc_y = [last_y] + fc["Forecast"].tolist()
         is_best = (model_name == best_model)
@@ -575,7 +592,8 @@ def plot_model_comparison(prod, gran, best_model, treated_q_df, treated_m_df, fo
                       legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
                       plot_bgcolor="rgba(255,255,255,0)", paper_bgcolor="rgba(255,255,255,0)",
                       title=dict(text=f"{prod} — comparação entre modelos ({gran.lower()})", font=dict(size=15, color=C_GREEN), y=0.97, yanchor="top"),
-                      yaxis=dict(title="Quantidade", gridcolor="#e0ece0"), xaxis=dict(title=eixo))
+                      yaxis=dict(title="Quantidade", gridcolor="#e0ece0"),
+                      xaxis=dict(title=eixo, type="category", categoryorder="array", categoryarray=full_order))
     return fig
 
 
@@ -760,8 +778,9 @@ if current == "Início":
     st.markdown("""<div class="info-card-blue"><strong>O que é o MAPE?</strong><br><br>
     MAPE (<em>Mean Absolute Percentage Error</em>) mede em porcentagem o quanto o modelo errou em relação à
     demanda real. Um MAPE de <strong>10%</strong> significa erro médio de 10%. Quanto menor, melhor.<br><br>
-    O sistema usa estes patamares de qualidade: <span class="mape-badge mape-exc">Excelente · ≤15%</span>
-    <span class="mape-badge mape-bom">Bom · 15–30%</span> <span class="mape-badge mape-att">Atenção · >30%</span></div>""", unsafe_allow_html=True)
+    O sistema usa estes patamares de qualidade: <span class="mape-badge mape-exc">Excelente · &lt;10%</span>
+    <span class="mape-badge mape-bom">Bom · 10–20%</span> <span class="mape-badge mape-reg">Regular · 20–40%</span>
+    <span class="mape-badge mape-att">Ruim · &gt;40%</span></div>""", unsafe_allow_html=True)
 
 
 # =========================================================
