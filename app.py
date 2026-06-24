@@ -547,7 +547,9 @@ def plot_history_forecast(prod, gran, model_name, treated_q_df, treated_m_df, fo
                              mode="lines+markers", name="Histórico", line=dict(color=C_GREEN, width=3), marker=dict(size=6)))
     if not fc.empty:
         fig.add_trace(go.Scatter(x=fc_x, y=fc_y, mode="lines+markers", name=f"Forecast ({model_name})",
-                                 line=dict(color=C_BLUE, width=3, dash="dash"), marker=dict(size=7, symbol="diamond")))
+                                 line=dict(color="#d62828", width=4, dash="dot"),
+                                 marker=dict(size=8, symbol="diamond", color="#d62828"),
+                                 zorder=100))
     eixo = "Mês" if gran == "Mensal" else "Trimestre"
     fig.update_layout(template="plotly_white", height=440, margin=dict(l=10, r=10, t=110, b=10),
                       font=dict(family="Inter, sans-serif", color="#1a2e1a"),
