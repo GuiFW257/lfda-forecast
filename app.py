@@ -119,6 +119,7 @@ st.markdown("""
     .mape-badge { display: inline-block; font-size: 0.72rem; font-weight: 600; padding: 0.15rem 0.6rem; border-radius: 5px; }
     .mape-exc { background: #d6f0de; color: #137a36; }
     .mape-bom { background: #faf0d2; color: #8a6200; }
+    .mape-reg { background: #fde8d0; color: #b5651d; }
     .mape-att { background: #f8dcdc; color: #b03030; }
     .gran-badge { display: inline-block; font-size: 0.72rem; font-weight: 600; padding: 0.15rem 0.6rem; border-radius: 5px; }
     .gran-mensal { background: var(--blue-light); color: var(--blue-dark); }
@@ -325,14 +326,20 @@ def fmt_br(value, decimals=0):
     s = f"{value:,.{decimals}f}"
     return s.replace(",", "X").replace(".", ",").replace("X", ".")
 
+# Z-scores para os níveis de intervalo de confiança disponíveis
+Z_SCORES = {80: 1.282, 85: 1.440, 90: 1.645, 95: 1.960, 99: 2.576}
+IC_LEVELS = [80, 85, 90, 95, 99]
+
 def mape_badge_html(mape):
     if pd.isna(mape):
         return '<span class="mape-badge mape-att">Sem teste</span>'
-    if mape <= 15:
-        return f'<span class="mape-badge mape-exc">Excelente · {mape:.1f}%</span>'
-    if mape <= 30:
-        return f'<span class="mape-badge mape-bom">Bom · {mape:.1f}%</span>'
-    return f'<span class="mape-badge mape-att">Atenção · {mape:.1f}%</span>'
+    if mape < 10:
+        return f'<span class="mape-badge mape-exc">Excelente · {mape:.2f}%</span>'
+    if mape < 20:
+        return f'<span class="mape-badge mape-bom">Bom · {mape:.2f}%</span>'
+    if mape < 40:
+        return f'<span class="mape-badge mape-reg">Regular · {mape:.2f}%</span>'
+    return f'<span class="mape-badge mape-att">Ruim · {mape:.2f}%</span>'
 
 def gran_badge_html(gran):
     cls = "gran-mensal" if gran == "Mensal" else "gran-trim"
@@ -409,16 +416,20 @@ def _run_one_series(prod, periodo_df, gran_name, audits, summaries, forecasts):
                 residual_std = float(np.nanstd(y.values - fitted_vals, ddof=1))
             if pd.isna(residual_std) or residual_std == 0:
                 residual_std = float(np.nanstd(y.values, ddof=1)) if len(y) > 1 else 0.0
-            z90 = 1.645
             future = future_periods(g["Periodo"].max(), horizon, freq)
             params_full = model_params(fit_full) if fit_full is not None else params
             for h, dt in enumerate(future, start=1):
                 pv = max(0.0, float(fc[h - 1]))
-                interval = z90 * residual_std * np.sqrt(h)
-                forecasts.append({"Produto": prod, "Granularidade": gran_name, "Modelo": disp_model,
-                                  "Período": label_func(dt), "PeriodoData": dt, "Forecast": pv,
-                                  "IC 90% Inferior": max(0.0, pv - interval), "IC 90% Superior": pv + interval,
-                                  "Alpha": params_full["Alpha"], "Beta": params_full["Beta"], "Gamma": params_full["Gamma"]})
+                rec = {"Produto": prod, "Granularidade": gran_name, "Modelo": disp_model,
+                       "Período": label_func(dt), "PeriodoData": dt, "Forecast": pv,
+                       "ResidStd": residual_std, "Passo": h,
+                       "Alpha": params_full["Alpha"], "Beta": params_full["Beta"], "Gamma": params_full["Gamma"]}
+                # calcula todas as faixas de IC
+                for lvl in IC_LEVELS:
+                    interval = Z_SCORES[lvl] * residual_std * np.sqrt(h)
+                    rec[f"IC {lvl}% Inferior"] = max(0.0, pv - interval)
+                    rec[f"IC {lvl}% Superior"] = pv + interval
+                forecasts.append(rec)
         except Exception as exc:
             summaries.append({"Produto": prod, "Granularidade": gran_name, "Modelo": disp_model,
                                "Períodos": len(y), "Treino": len(train), "Teste": len(test), "Regra": split_rule,
@@ -452,11 +463,6 @@ def run_models(monthly_clean):
     summary_df = pd.DataFrame(summaries)
     audit_df = pd.DataFrame(audits)
     forecast_df = pd.DataFrame(forecasts)
-
-    if not forecast_df.empty:
-        annual = forecast_df.groupby(["Produto", "Granularidade", "Modelo"], as_index=False)["IC 90% Superior"].sum()
-        annual = annual.rename(columns={"IC 90% Superior": "Soma Anual - Limite Superior"})
-        forecast_df = forecast_df.merge(annual, on=["Produto", "Granularidade", "Modelo"], how="left")
 
     return treated_q_df, treated_m_df, summary_df, audit_df, forecast_df
 
@@ -501,33 +507,42 @@ def _treated_for(prod, gran, treated_q_df, treated_m_df):
     h = src[src["Produto"] == prod].sort_values("Periodo")
     return h, label_func
 
-def plot_history_forecast(prod, gran, model_name, treated_q_df, treated_m_df, forecast_df):
-    """Linha do tempo: histórico tratado + forecast do modelo/granularidade escolhidos + faixa IC90."""
+def plot_history_forecast(prod, gran, model_name, treated_q_df, treated_m_df, forecast_df, ic_destaque=90):
+    """Linha do tempo: histórico + forecast + todas as faixas de IC (80/85/90/95/99%), destacando a selecionada."""
     hist, label_func = _treated_for(prod, gran, treated_q_df, treated_m_df)
     fc = forecast_df[(forecast_df["Produto"] == prod) & (forecast_df["Granularidade"] == gran) &
                      (forecast_df["Modelo"] == model_name)].sort_values("PeriodoData")
     fig = go.Figure()
     if hist.empty:
         return fig
-    fig.add_trace(go.Scatter(x=[label_func(t) for t in hist["Periodo"]], y=hist["Valor Tratado"],
-                             mode="lines+markers", name="Histórico", line=dict(color=C_GREEN, width=3), marker=dict(size=6)))
     if not fc.empty:
         last_x = label_func(hist["Periodo"].iloc[-1]); last_y = hist["Valor Tratado"].iloc[-1]
         fc_x = [last_x] + [label_func(t) for t in fc["PeriodoData"]]
         fc_y = [last_y] + fc["Forecast"].tolist()
-        up = [last_y] + fc["IC 90% Superior"].tolist()
-        lo = [last_y] + fc["IC 90% Inferior"].tolist()
-        fig.add_trace(go.Scatter(x=fc_x + fc_x[::-1], y=up + lo[::-1], fill="toself",
-                                 fillcolor="rgba(30,126,200,0.12)", line=dict(color="rgba(0,0,0,0)"),
-                                 name="IC 90%", hoverinfo="skip"))
+        # desenha faixas do mais largo (99%) ao mais estreito (80%), para sobreposição correta
+        opac = {80: 0.30, 85: 0.24, 90: 0.18, 95: 0.12, 99: 0.07}
+        for lvl in sorted(IC_LEVELS, reverse=True):
+            up = [last_y] + fc[f"IC {lvl}% Superior"].tolist()
+            lo = [last_y] + fc[f"IC {lvl}% Inferior"].tolist()
+            is_dest = (lvl == ic_destaque)
+            fig.add_trace(go.Scatter(
+                x=fc_x + fc_x[::-1], y=up + lo[::-1], fill="toself",
+                fillcolor=f"rgba(30,111,184,{opac[lvl]})",
+                line=dict(color="rgba(30,111,184,0.7)" if is_dest else "rgba(0,0,0,0)",
+                          width=1.5 if is_dest else 0, dash="dot" if is_dest else "solid"),
+                name=f"IC {lvl}%" + (" (selecionado)" if is_dest else ""), hoverinfo="skip"))
+    # histórico
+    fig.add_trace(go.Scatter(x=[label_func(t) for t in hist["Periodo"]], y=hist["Valor Tratado"],
+                             mode="lines+markers", name="Histórico", line=dict(color=C_GREEN, width=3), marker=dict(size=6)))
+    if not fc.empty:
         fig.add_trace(go.Scatter(x=fc_x, y=fc_y, mode="lines+markers", name=f"Forecast ({model_name})",
                                  line=dict(color=C_BLUE, width=3, dash="dash"), marker=dict(size=7, symbol="diamond")))
     eixo = "Mês" if gran == "Mensal" else "Trimestre"
-    fig.update_layout(template="plotly_white", height=420, margin=dict(l=10, r=10, t=95, b=10),
+    fig.update_layout(template="plotly_white", height=440, margin=dict(l=10, r=10, t=110, b=10),
                       font=dict(family="Inter, sans-serif", color="#1a2e1a"),
                       legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
                       plot_bgcolor="rgba(255,255,255,0)", paper_bgcolor="rgba(255,255,255,0)",
-                      title=dict(text=f"{prod} — histórico e previsão ({gran.lower()})", font=dict(size=15, color=C_GREEN), y=0.97, yanchor="top"),
+                      title=dict(text=f"{prod} — histórico e previsão ({gran.lower()})", font=dict(size=15, color=C_GREEN), y=0.98, yanchor="top"),
                       yaxis=dict(title="Quantidade", gridcolor="#e0ece0"), xaxis=dict(title=eixo))
     return fig
 
@@ -685,8 +700,9 @@ if current == "Início":
 
     st.markdown("---")
     st.markdown('<div class="section-title">Formato da planilha de entrada</div>', unsafe_allow_html=True)
-    st.markdown("""<div class="info-card-yellow">A planilha deve ter três colunas preenchidas da seguinte forma:<br><br>
-    <strong>Coluna B</strong> — Nome do produto &nbsp;|&nbsp; <strong>Coluna C</strong> — Data (mês de referência) &nbsp;|&nbsp; <strong>Coluna D</strong> — Quantidade</div>""", unsafe_allow_html=True)
+    st.markdown("""<div class="info-card-yellow">A planilha anexada deve conter três colunas com os seguintes nomes:<br><br>
+    <strong>Produto</strong> — nome ou código do produto &nbsp;|&nbsp; <strong>Data</strong> — mês de referência &nbsp;|&nbsp; <strong>Quantidade</strong> — volume ou demanda<br><br>
+    A ordem ou posição das colunas não importa, e colunas adicionais (índices, observações, etc.) são ignoradas automaticamente.</div>""", unsafe_allow_html=True)
     st.markdown("**Exemplo:**")
     st.dataframe(pd.DataFrame({"Produto": ["Metanol", "Acetonitrila", "Tubo Falcon 15ml", "Tubo Falcon 50ml", "Vial Vidro"],
                                "Data": ["março de 2026"] * 5, "Quantidade": [5000, 16000, 1000, 1000, 500]}), use_container_width=True)
@@ -877,9 +893,16 @@ elif current == "Resultados mais significativos":
         treated_m = st.session_state.treated_m
         produtos = sorted(fc_all["Produto"].unique().tolist())
 
+        # Seletor de nível de intervalo de confiança (governa cards e tabelas)
+        cic1, cic2 = st.columns([1, 3])
+        ic_sel = cic1.selectbox("Intervalo de confiança", IC_LEVELS, index=IC_LEVELS.index(90),
+                                format_func=lambda x: f"{x}%", key="ic_global")
+        sup_col = f"IC {ic_sel}% Superior"
+        inf_col = f"IC {ic_sel}% Inferior"
+
         # ---------- RESUMO EXECUTIVO ----------
         st.markdown('<div class="section-title">Resumo executivo</div>', unsafe_allow_html=True)
-        st.markdown("<div class='small-muted'>Previsão anual usando a melhor combinação de modelo e granularidade de cada produto.</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='small-muted'>Previsão anual usando a melhor combinação de modelo e granularidade de cada produto. Limites com intervalo de confiança de {ic_sel}%.</div>", unsafe_allow_html=True)
         st.write("")
 
         cols = st.columns(min(len(produtos), 3))
@@ -887,12 +910,12 @@ elif current == "Resultados mais significativos":
             gran, model, mape_v = best_combo_for(summary, prod)
             fc_best = fc_all[(fc_all["Produto"] == prod) & (fc_all["Granularidade"] == gran) & (fc_all["Modelo"] == model)]
             anual = fc_best["Forecast"].sum()
-            anual_sup = fc_best["IC 90% Superior"].sum()
+            anual_sup = fc_best[sup_col].sum()
             with cols[i % len(cols)]:
                 st.markdown(f"""<div class="exec-card">
                     <div class="exec-prod">{prod}</div>
-                    <div class="exec-row"><span class="exec-label">Previsão anual</span><span class="exec-value">{fmt_br(anual)}</span></div>
-                    <div class="exec-row"><span class="exec-label">Limite superior (IC 90%)</span><span class="exec-value">{fmt_br(anual_sup)}</span></div>
+                    <div class="exec-row"><span class="exec-label">Previsão anual</span><span class="exec-value">{fmt_br(anual, 2)}</span></div>
+                    <div class="exec-row"><span class="exec-label">Limite superior (IC {ic_sel}%)</span><span class="exec-value">{fmt_br(anual_sup, 2)}</span></div>
                     <div class="exec-row"><span class="exec-label">Melhor modelo</span><span class="exec-model">{model}</span></div>
                     <div class="exec-row"><span class="exec-label">Granularidade</span>{gran_badge_html(gran)}</div>
                     <div style="margin-top:8px">{mape_badge_html(mape_v)}</div>
@@ -900,7 +923,7 @@ elif current == "Resultados mais significativos":
 
         st.write("")
         st.markdown("##### Previsão anual consolidada (melhor combinação de cada produto)")
-        st.markdown("<div class='small-muted'>Como cada produto pode ter sido melhor em mensal ou trimestral, a tabela mostra o total anual previsto e a granularidade escolhida.</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='small-muted'>Total anual previsto e granularidade escolhida por produto. Limite superior com IC {ic_sel}%.</div>", unsafe_allow_html=True)
 
         rows = []
         for prod in produtos:
@@ -909,14 +932,14 @@ elif current == "Resultados mais significativos":
             rows.append({
                 "Produto": prod, "Granularidade": gran, "Modelo": model,
                 "Total anual previsto": fc_best["Forecast"].sum(),
-                "Limite superior anual": fc_best["IC 90% Superior"].sum(),
+                f"Limite superior anual (IC {ic_sel}%)": fc_best[sup_col].sum(),
                 "MAPE Agregado %": mape_v,
             })
         consol = pd.DataFrame(rows)
         st.dataframe(consol.style.format({
-            "Total anual previsto": lambda v: fmt_br(v),
-            "Limite superior anual": lambda v: fmt_br(v),
-            "MAPE Agregado %": lambda v: f"{v:.1f}" if pd.notna(v) else "—"}, na_rep="—"), use_container_width=True)
+            "Total anual previsto": lambda v: fmt_br(v, 2),
+            f"Limite superior anual (IC {ic_sel}%)": lambda v: fmt_br(v, 2),
+            "MAPE Agregado %": lambda v: f"{v:.2f}" if pd.notna(v) else "—"}, na_rep="—"), use_container_width=True)
 
         st.markdown("---")
 
@@ -927,8 +950,8 @@ elif current == "Resultados mais significativos":
         st.markdown(f"<div class='small-muted'>Melhor combinação para <strong>{sel_prod}</strong>: modelo <strong>{model}</strong> em escala <strong>{gran.lower()}</strong>.</div>", unsafe_allow_html=True)
         st.write("")
 
-        st.plotly_chart(plot_history_forecast(sel_prod, gran, model, treated_q, treated_m, fc_all), use_container_width=True)
-        st.markdown(f"<div class='small-muted'>Histórico + previsão do modelo escolhido (<strong>{model}</strong>, {gran.lower()}) com faixa de confiança de 90%.</div>", unsafe_allow_html=True)
+        st.plotly_chart(plot_history_forecast(sel_prod, gran, model, treated_q, treated_m, fc_all, ic_destaque=ic_sel), use_container_width=True)
+        st.markdown(f"<div class='small-muted'>Histórico + previsão do modelo escolhido (<strong>{model}</strong>, {gran.lower()}). As faixas mostram os intervalos de confiança de 80%, 85%, 90%, 95% e 99% — a faixa de <strong>{ic_sel}%</strong> está destacada com borda pontilhada.</div>", unsafe_allow_html=True)
 
         st.write("")
         st.plotly_chart(plot_model_comparison(sel_prod, gran, model, treated_q, treated_m, fc_all), use_container_width=True)
@@ -946,11 +969,14 @@ elif current == "Resultados mais significativos":
         if prod_filter != "Todos": fc = fc[fc["Produto"] == prod_filter]
         if gran_filter != "Todas": fc = fc[fc["Granularidade"] == gran_filter]
         if model_filter != "Todos": fc = fc[fc["Modelo"] == model_filter]
-        fc_show = fc.drop(columns=["PeriodoData"], errors="ignore")
+        # mostra só as colunas relevantes para o IC selecionado
+        base_cols = ["Produto", "Granularidade", "Modelo", "Período", "Forecast", inf_col, sup_col, "Alpha", "Beta", "Gamma"]
+        fc_show = fc[[c for c in base_cols if c in fc.columns]].copy()
         st.dataframe(fc_show.style.format({
-            "Forecast": lambda v: fmt_br(v), "IC 90% Inferior": lambda v: fmt_br(v),
-            "IC 90% Superior": lambda v: fmt_br(v), "Soma Anual - Limite Superior": lambda v: fmt_br(v),
+            "Forecast": lambda v: fmt_br(v, 2), inf_col: lambda v: fmt_br(v, 2),
+            sup_col: lambda v: fmt_br(v, 2),
             "Alpha": "{:.4f}", "Beta": "{:.4f}", "Gamma": "{:.4f}"}, na_rep="—"), use_container_width=True)
+        st.caption(f"Limites exibidos para o intervalo de confiança de {ic_sel}%. Altere o seletor no topo da página para ver outros níveis.")
 
 
 # =========================================================
@@ -961,7 +987,7 @@ elif current == "Exportação":
     if not has_results():
         st.info("Faça o upload de uma base em **Upload** para habilitar a exportação.")
     else:
-        fc_export = st.session_state.forecast.drop(columns=["PeriodoData"], errors="ignore")
+        fc_export = st.session_state.forecast.drop(columns=["PeriodoData", "ResidStd", "Passo"], errors="ignore")
         q_tab = st.session_state.quarterly.copy()
         q_tab["Trimestre"] = q_tab["Periodo"].apply(quarter_label)
         q_tab = q_tab[["Produto", "Trimestre", "Quantidade"]]
