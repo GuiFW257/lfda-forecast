@@ -141,6 +141,18 @@ st.markdown("""
     .gran-badge { display: inline-block; font-size: 0.72rem; font-weight: 600; padding: 0.15rem 0.6rem; border-radius: 5px; }
     .gran-mensal { background: var(--blue-light); color: var(--blue-dark); }
     .gran-trim { background: #efe6f7; color: #6a3da8; }
+
+    /* Diagnóstico de confiabilidade (semáforo) */
+    .diag { border: 1px solid var(--border); border-radius: 8px; padding: 0.9rem 1.1rem; margin-bottom: 0.4rem; display: flex; align-items: flex-start; gap: 12px; }
+    .diag-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; margin-top: 3px; }
+    .diag-title { font-size: 0.98rem; font-weight: 700; color: var(--text); }
+    .diag-text { font-size: 0.86rem; color: var(--muted); margin-top: 2px; line-height: 1.5; }
+    .diag-verde-escuro { background: #eaf6ee; border-left: 4px solid #1a7a3c; }
+    .diag-verde-claro  { background: #eef8f1; border-left: 4px solid #3fa65f; }
+    .diag-amarelo      { background: #fdfaf0; border-left: 4px solid #c79a1e; }
+    .diag-vermelho     { background: #fdf0ee; border-left: 4px solid #c0392b; }
+    .diag-cinza        { background: #f5f7fa; border-left: 4px solid #687989; }
+    .diag-disclaimer { font-size: 0.78rem; color: #9aa8b5; font-style: italic; margin: 0 0 0.6rem 2px; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -515,53 +527,65 @@ def _ic_relative_width(forecast_df, prod, gran, model, ic_level=90):
     return amp / prev
 
 
-def reliability_diagnosis(forecast_df, summary, prod, gran, model, mape, ic_level=90):
-    """Gera (titulo, texto, classe_css) com diagnóstico de confiabilidade.
-    O MAPE lidera o diagnóstico; a largura do IC entra como complemento qualitativo,
-    comparada à mediana dos demais produtos (já que toda a operação tem IC naturalmente largo)."""
-    # complemento de IC: compara este produto à mediana dos demais
-    widths = []
-    for p in summary["Produto"].unique():
-        g, m, _ = best_combo_for(summary, p)
-        if g is None:
-            continue
-        w = _ic_relative_width(forecast_df, p, g, m, ic_level)
-        if pd.notna(w):
-            widths.append(w)
-    this_w = _ic_relative_width(forecast_df, prod, gran, model, ic_level)
-    median_w = float(np.median(widths)) if widths else np.nan
-    if pd.notna(this_w) and pd.notna(median_w) and this_w > median_w * 1.5:
-        ic_compl = (f" Ainda assim, a faixa de incerteza deste produto é ampla mesmo para o padrão da operação "
-                    f"(IC {ic_level}% de cerca de {this_w*100:.0f}% da previsão), então trate o número como o centro "
-                    f"de um intervalo, e não como valor exato.")
-    else:
-        ic_compl = (f" A faixa de incerteza está dentro do padrão observado nos demais produtos "
-                    f"(IC {ic_level}% de cerca de {this_w*100:.0f}% da previsão).") if pd.notna(this_w) else ""
+def _mape_tier(mape):
+    """0=Excelente,1=Bom,2=Regular,3=Ruim,None=sem teste"""
+    if pd.isna(mape): return None
+    if mape < 10: return 0
+    if mape < 20: return 1
+    if mape < 40: return 2
+    return 3
 
-    if pd.isna(mape):
-        return ("Confiabilidade não verificável",
-                "Não foi possível validar este produto estatisticamente, porque o histórico disponível é curto demais "
-                "para um teste de backtest. Trate a previsão como exploratória e apoie a decisão no seu conhecimento do produto.",
-                "info-card-yellow")
-    if mape < 10:
-        return ("Alta confiabilidade",
-                f"No teste contra dados reais, o modelo errou em média apenas {mape:.1f}%, reproduzindo bem o "
-                f"comportamento recente da demanda. A previsão é uma base sólida para planejamento.{ic_compl}",
-                "info-card")
-    if mape < 20:
-        return ("Boa confiabilidade",
-                f"O modelo errou em média {mape:.1f}% no teste, o que indica boa aderência ao histórico. "
-                f"É adequado para planejamento, mantendo uma margem de segurança.{ic_compl}",
-                "info-card")
-    if mape < 40:
-        return ("Confiabilidade moderada",
-                f"O modelo errou em média {mape:.1f}% no teste. Use a previsão como referência de direção "
-                f"(tendência de alta ou baixa) e valide os números com seu conhecimento do produto.{ic_compl}",
-                "info-card-blue")
-    return ("Baixa confiabilidade",
-            f"No teste, o modelo errou em média {mape:.1f}%, um desvio alto. Não recomendamos usar estes números "
-            f"como base direta de planejamento — a avaliação qualitativa do analista tende a ser mais confiável aqui.",
-            "info-card-yellow")
+def _ic_tier(width):
+    """Faixas de amplitude relativa do IC: 0=≤100%,1=100-150%,2=150-300%,3=>300%"""
+    if pd.isna(width): return None
+    if width <= 1.0: return 0
+    if width <= 1.5: return 1
+    if width <= 3.0: return 2
+    return 3
+
+# Semáforo: MAPE lidera (linha), IC só rebaixa (coluna). Valores: cor do diagnóstico.
+# colunas IC: 0/1 (Exc/Bom), 2 (Regular), 3 (Ruim)
+_SEMAFORO = {
+    0: ["verde-escuro", "verde-escuro", "verde-claro", "amarelo"],  # MAPE Excelente
+    1: ["verde-claro",  "verde-claro",  "amarelo",     "amarelo"],  # MAPE Bom
+    2: ["amarelo",      "amarelo",      "amarelo",     "vermelho"], # MAPE Regular
+    3: ["vermelho",     "vermelho",     "vermelho",    "vermelho"], # MAPE Ruim
+}
+
+_SEMAFORO_INFO = {
+    "verde-escuro": ("#1a7a3c", "Confiabilidade estatística alta", "diag-verde-escuro"),
+    "verde-claro":  ("#3fa65f", "Confiabilidade estatística favorável", "diag-verde-claro"),
+    "amarelo":      ("#c79a1e", "Confiabilidade estatística moderada", "diag-amarelo"),
+    "vermelho":     ("#c0392b", "Confiabilidade estatística baixa", "diag-vermelho"),
+}
+
+
+def reliability_diagnosis(forecast_df, summary, prod, gran, model, mape, ic_level=90):
+    """Retorna (cor_hex, titulo, frase_factual, classe_css) com o diagnóstico de confiabilidade.
+    O MAPE lidera; a amplitude do IC só pode rebaixar a cor. Linguagem factual, sem recomendar compra."""
+    width = _ic_relative_width(forecast_df, prod, gran, model, ic_level)
+    mt, it = _mape_tier(mape), _ic_tier(width)
+
+    if mt is None:
+        cor, titulo, cls = "#687989", "Confiabilidade não verificável", "diag-cinza"
+        frase = "Histórico curto demais para validar o modelo por backtest. Trate a previsão como exploratória."
+        return cor, titulo, frase, cls
+
+    ic_col = it if it is not None else 0
+    key = _SEMAFORO[mt][ic_col]
+    cor, titulo, cls = _SEMAFORO_INFO[key]
+
+    # frase factual curta (descreve a estatística, não recomenda)
+    w_txt = f"cerca de {width*100:.0f}% da previsão" if pd.notna(width) else "não estimada"
+    if mt == 0 and it in (0, 1):
+        frase = f"Erro médio de {mape:.1f}% no teste e faixa de incerteza dentro do padrão da operação ({w_txt})."
+    elif mt <= 1 and it == 3:
+        frase = f"Erro médio de {mape:.1f}% no teste, porém faixa de incerteza ampla ({w_txt})."
+    elif mt == 3:
+        frase = f"Erro médio de {mape:.1f}% no teste, acima do aceitável para uso quantitativo."
+    else:
+        frase = f"Erro médio de {mape:.1f}% no teste; faixa de incerteza de {w_txt}."
+    return cor, titulo, frase, cls
 
 def to_excel_bytes(sheets):
     output = io.BytesIO()
@@ -693,7 +717,7 @@ def plot_model_comparison(prod, gran, best_model, treated_q_df, treated_m_df, fo
 # clicar num item de um grupo desmarca os demais.
 GROUPS = {
     "Principal": ["Início", "Upload", "Exportação"],
-    "Previsão de Demanda": ["Resultados mais significativos", "Resultados abrangentes"],
+    "Previsão de Demanda": ["Resultados principais", "Resultados abrangentes"],
 }
 
 if "nav_page" not in st.session_state:
@@ -703,7 +727,7 @@ if "fc_years" not in st.session_state:
 
 # Redirect automático pós-upload: leva direto aos resultados
 if st.session_state.get("go_forecast"):
-    st.session_state.nav_page = "Resultados mais significativos"
+    st.session_state.nav_page = "Resultados principais"
     st.session_state.go_forecast = False
 
 with st.sidebar:
@@ -881,7 +905,7 @@ elif current == "Upload":
         st.markdown("### Prévia da base original")
         st.dataframe(st.session_state.raw_df.head(30), use_container_width=True)
     else:
-        st.info("Comece subindo a planilha. Depois acesse a aba **Resultados mais significativos** para ver as previsões.")
+        st.info("Comece subindo a planilha. Depois acesse a aba **Resultados principais** para ver as previsões.")
 
 
 # =========================================================
@@ -972,8 +996,8 @@ elif current == "Resultados abrangentes":
 # =========================================================
 # FORECAST
 # =========================================================
-elif current == "Resultados mais significativos":
-    st.markdown('<div class="page-title">Resultados mais significativos</div><div class="page-sub">Previsão de demanda por produto. O sistema testa cada produto em escala mensal e trimestral e escolhe automaticamente a melhor combinação de modelo e granularidade.</div>', unsafe_allow_html=True)
+elif current == "Resultados principais":
+    st.markdown('<div class="page-title">Resultados principais</div><div class="page-sub">Previsão de demanda por produto. O sistema testa cada produto em escala mensal e trimestral e escolhe automaticamente a melhor combinação de modelo e granularidade.</div>', unsafe_allow_html=True)
     if st.session_state.forecast is None or st.session_state.forecast.empty:
         st.info("Faça o upload de uma base em **Upload** para gerar o forecast.")
     else:
@@ -1050,9 +1074,13 @@ elif current == "Resultados mais significativos":
         st.markdown(f"<div class='small-muted'>Melhor combinação para <strong>{sel_prod}</strong>: modelo <strong>{model}</strong> em escala <strong>{gran.lower()}</strong>.</div>", unsafe_allow_html=True)
         st.write("")
 
-        # Diagnóstico automático de confiabilidade
-        diag_title, diag_text, diag_cls = reliability_diagnosis(fc_all, summary, sel_prod, gran, model, mape_v, ic_level=ic_sel)
-        st.markdown(f"""<div class="{diag_cls}"><strong>{diag_title}</strong><br>{diag_text}</div>""", unsafe_allow_html=True)
+        # Diagnóstico automático de confiabilidade (semáforo + disclaimer fixo)
+        diag_cor, diag_title, diag_text, diag_cls = reliability_diagnosis(fc_all, summary, sel_prod, gran, model, mape_v, ic_level=ic_sel)
+        st.markdown(f"""<div class="diag {diag_cls}">
+            <div class="diag-dot" style="background:{diag_cor}"></div>
+            <div><div class="diag-title">{diag_title}</div><div class="diag-text">{diag_text}</div></div>
+        </div>
+        <div class="diag-disclaimer">* Indicador estatístico de apoio. A decisão permanece a seu critério.</div>""", unsafe_allow_html=True)
         st.write("")
 
         st.plotly_chart(plot_history_forecast(sel_prod, gran, model, treated_q, treated_m, fc_all, ic_destaque=ic_sel), use_container_width=True)
