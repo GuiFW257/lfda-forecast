@@ -71,6 +71,17 @@ st.markdown("""
         width: auto !important; text-align: center !important;
         justify-content: center !important; border-left: none !important;
     }
+    /* Esconde o ícone interno do botão (a ligadura 'upload' do Material Symbols que
+       aparecia sobreposta ao texto) */
+    [data-testid="stFileUploader"] button [data-testid="stIconMaterial"],
+    [data-testid="stFileUploader"] button span[class*="material"],
+    [data-testid="stFileUploader"] button span[class*="Material"],
+    [data-testid="stFileUploader"] button .material-icons,
+    [data-testid="stFileUploader"] button i {
+        display: none !important;
+    }
+    [data-testid="stFileUploader"] button::before,
+    [data-testid="stFileUploader"] button::after { content: none !important; }
 
     .sb-config { margin: 14px 4px 0 4px; padding: 11px 12px; background: #f7f9fb; border: 1px solid var(--border); border-radius: 8px; font-size: 0.74rem; color: var(--muted); line-height: 1.8; }
     .sb-config-title { font-weight: 700; color: var(--text); font-size: 0.76rem; margin-bottom: 4px; }
