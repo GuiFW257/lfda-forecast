@@ -503,6 +503,66 @@ def best_combo_for(summary, prod):
     row = sub.iloc[0]
     return row["Granularidade"], row["Modelo"], row["MAPE Agregado %"]
 
+
+def _ic_relative_width(forecast_df, prod, gran, model, ic_level=90):
+    """Amplitude relativa do IC: (soma sup - soma inf) / soma previsão."""
+    fb = forecast_df[(forecast_df["Produto"] == prod) & (forecast_df["Granularidade"] == gran) &
+                     (forecast_df["Modelo"] == model)]
+    prev = fb["Forecast"].sum()
+    if prev <= 0:
+        return np.nan
+    amp = fb[f"IC {ic_level}% Superior"].sum() - fb[f"IC {ic_level}% Inferior"].sum()
+    return amp / prev
+
+
+def reliability_diagnosis(forecast_df, summary, prod, gran, model, mape, ic_level=90):
+    """Gera (titulo, texto, classe_css) com diagnóstico de confiabilidade.
+    O MAPE lidera o diagnóstico; a largura do IC entra como complemento qualitativo,
+    comparada à mediana dos demais produtos (já que toda a operação tem IC naturalmente largo)."""
+    # complemento de IC: compara este produto à mediana dos demais
+    widths = []
+    for p in summary["Produto"].unique():
+        g, m, _ = best_combo_for(summary, p)
+        if g is None:
+            continue
+        w = _ic_relative_width(forecast_df, p, g, m, ic_level)
+        if pd.notna(w):
+            widths.append(w)
+    this_w = _ic_relative_width(forecast_df, prod, gran, model, ic_level)
+    median_w = float(np.median(widths)) if widths else np.nan
+    if pd.notna(this_w) and pd.notna(median_w) and this_w > median_w * 1.5:
+        ic_compl = (f" Ainda assim, a faixa de incerteza deste produto é ampla mesmo para o padrão da operação "
+                    f"(IC {ic_level}% de cerca de {this_w*100:.0f}% da previsão), então trate o número como o centro "
+                    f"de um intervalo, e não como valor exato.")
+    else:
+        ic_compl = (f" A faixa de incerteza está dentro do padrão observado nos demais produtos "
+                    f"(IC {ic_level}% de cerca de {this_w*100:.0f}% da previsão).") if pd.notna(this_w) else ""
+
+    if pd.isna(mape):
+        return ("Confiabilidade não verificável",
+                "Não foi possível validar este produto estatisticamente, porque o histórico disponível é curto demais "
+                "para um teste de backtest. Trate a previsão como exploratória e apoie a decisão no seu conhecimento do produto.",
+                "info-card-yellow")
+    if mape < 10:
+        return ("Alta confiabilidade",
+                f"No teste contra dados reais, o modelo errou em média apenas {mape:.1f}%, reproduzindo bem o "
+                f"comportamento recente da demanda. A previsão é uma base sólida para planejamento.{ic_compl}",
+                "info-card")
+    if mape < 20:
+        return ("Boa confiabilidade",
+                f"O modelo errou em média {mape:.1f}% no teste, o que indica boa aderência ao histórico. "
+                f"É adequado para planejamento, mantendo uma margem de segurança.{ic_compl}",
+                "info-card")
+    if mape < 40:
+        return ("Confiabilidade moderada",
+                f"O modelo errou em média {mape:.1f}% no teste. Use a previsão como referência de direção "
+                f"(tendência de alta ou baixa) e valide os números com seu conhecimento do produto.{ic_compl}",
+                "info-card-blue")
+    return ("Baixa confiabilidade",
+            f"No teste, o modelo errou em média {mape:.1f}%, um desvio alto. Não recomendamos usar estes números "
+            f"como base direta de planejamento — a avaliação qualitativa do analista tende a ser mais confiável aqui.",
+            "info-card-yellow")
+
 def to_excel_bytes(sheets):
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
@@ -988,6 +1048,11 @@ elif current == "Resultados mais significativos":
         sel_prod = st.selectbox("Selecione o produto", produtos)
         gran, model, mape_v = best_combo_for(summary, sel_prod)
         st.markdown(f"<div class='small-muted'>Melhor combinação para <strong>{sel_prod}</strong>: modelo <strong>{model}</strong> em escala <strong>{gran.lower()}</strong>.</div>", unsafe_allow_html=True)
+        st.write("")
+
+        # Diagnóstico automático de confiabilidade
+        diag_title, diag_text, diag_cls = reliability_diagnosis(fc_all, summary, sel_prod, gran, model, mape_v, ic_level=ic_sel)
+        st.markdown(f"""<div class="{diag_cls}"><strong>{diag_title}</strong><br>{diag_text}</div>""", unsafe_allow_html=True)
         st.write("")
 
         st.plotly_chart(plot_history_forecast(sel_prod, gran, model, treated_q, treated_m, fc_all, ic_destaque=ic_sel), use_container_width=True)
