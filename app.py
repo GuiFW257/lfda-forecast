@@ -34,7 +34,7 @@ st.markdown("""
     }
     * { font-family: 'Inter', sans-serif !important; }
     .stApp { background: var(--bg); color: var(--text); }
-    .block-container { padding-top: 1.4rem; padding-bottom: 2rem; max-width: 1300px; }
+    .block-container { padding-top: 3rem; padding-bottom: 2rem; max-width: 1300px; }
     [data-testid="stSidebar"] { background: var(--panel); border-right: 1px solid var(--border-strong); }
     [data-testid="stSidebar"] * { font-family: 'Inter', sans-serif !important; }
     .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--green); margin-right: 6px; }
@@ -347,23 +347,26 @@ def gran_badge_html(gran):
 
 
 # Configurações de cada granularidade testada
-# label_func: como rotular o período; freq; horizonte (1 ano); variantes de sazonalidade do HW
+# freq; passos = períodos em 1 ano (base do teste e do forecast); label; sazonalidades do HW
 GRAN_CONFIGS = {
-    "Mensal":     {"freq": "M", "horizon": 12, "label": month_label,   "hw_seasons": [12, 4]},
-    "Trimestral": {"freq": "Q", "horizon": 4,  "label": quarter_label, "hw_seasons": [4]},
+    "Mensal":     {"freq": "M", "year_steps": 12, "label": month_label,   "hw_seasons": [12, 4]},
+    "Trimestral": {"freq": "Q", "year_steps": 4,  "label": quarter_label, "hw_seasons": [4]},
 }
 
 
-def _run_one_series(prod, periodo_df, gran_name, audits, summaries, forecasts):
-    """Roda os 3 modelos para um produto numa granularidade. Preenche audits/summaries/forecasts."""
+def _run_one_series(prod, periodo_df, gran_name, audits, summaries, forecasts, fc_years=1):
+    """Roda os 3 modelos para um produto numa granularidade.
+    O teste/MAPE usa sempre 1 ano (year_steps); o forecast usa fc_years anos."""
     cfg = GRAN_CONFIGS[gran_name]
-    freq, horizon, label_func = cfg["freq"], cfg["horizon"], cfg["label"]
+    freq, year_steps, label_func = cfg["freq"], cfg["year_steps"], cfg["label"]
+    test_horizon = year_steps              # teste sempre 1 ano (mantém MAPE comparável)
+    fc_horizon = year_steps * fc_years     # forecast pode ser 1 ou 2 anos
 
     g = periodo_df.sort_values("Periodo").copy()
     treated = treat_zeros_preserve_total(g["Quantidade"].astype(float).values)
     g["Valor Tratado"] = treated
     y = pd.Series(treated, index=g["Periodo"])
-    train, test, split_rule = split_train_test(y, horizon)
+    train, test, split_rule = split_train_test(y, test_horizon)
     test_steps = len(test)
 
     # define as variantes de modelo a rodar (HW pode ter mais de uma sazonalidade)
@@ -402,7 +405,7 @@ def _run_one_series(prod, periodo_df, gran_name, audits, summaries, forecasts):
                                "Alpha": params["Alpha"], "Beta": params["Beta"], "Gamma": params["Gamma"]})
 
             # forecast final com série completa
-            fit_full, fc = fit_forecast_model(model_name, y, horizon, seasonal_periods=sp)
+            fit_full, fc = fit_forecast_model(model_name, y, fc_horizon, seasonal_periods=sp)
             fc = pd.Series(fc).astype(float).values
             fitted_vals = None
             if fit_full is not None:
@@ -416,13 +419,14 @@ def _run_one_series(prod, periodo_df, gran_name, audits, summaries, forecasts):
                 residual_std = float(np.nanstd(y.values - fitted_vals, ddof=1))
             if pd.isna(residual_std) or residual_std == 0:
                 residual_std = float(np.nanstd(y.values, ddof=1)) if len(y) > 1 else 0.0
-            future = future_periods(g["Periodo"].max(), horizon, freq)
+            future = future_periods(g["Periodo"].max(), fc_horizon, freq)
             params_full = model_params(fit_full) if fit_full is not None else params
             for h, dt in enumerate(future, start=1):
                 pv = max(0.0, float(fc[h - 1]))
+                ano = 1 if h <= year_steps else 2
                 rec = {"Produto": prod, "Granularidade": gran_name, "Modelo": disp_model,
                        "Período": label_func(dt), "PeriodoData": dt, "Forecast": pv,
-                       "ResidStd": residual_std, "Passo": h,
+                       "ResidStd": residual_std, "Passo": h, "Ano": ano,
                        "Alpha": params_full["Alpha"], "Beta": params_full["Beta"], "Gamma": params_full["Gamma"]}
                 # calcula todas as faixas de IC
                 for lvl in IC_LEVELS:
@@ -439,7 +443,7 @@ def _run_one_series(prod, periodo_df, gran_name, audits, summaries, forecasts):
     return g  # série tratada desta granularidade
 
 
-def run_models(monthly_clean):
+def run_models(monthly_clean, fc_years=1):
     """Roda todos os produtos em Mensal e Trimestral, todos os modelos."""
     treated_m, treated_q = [], []
     summaries, audits, forecasts = [], [], []
@@ -452,10 +456,10 @@ def run_models(monthly_clean):
         gq = base_q[base_q["Produto"] == prod]
         gm = base_m[base_m["Produto"] == prod]
         if not gq.empty:
-            tq = _run_one_series(prod, gq, "Trimestral", audits, summaries, forecasts)
+            tq = _run_one_series(prod, gq, "Trimestral", audits, summaries, forecasts, fc_years)
             treated_q.append(tq)
         if not gm.empty:
-            tm = _run_one_series(prod, gm, "Mensal", audits, summaries, forecasts)
+            tm = _run_one_series(prod, gm, "Mensal", audits, summaries, forecasts, fc_years)
             treated_m.append(tm)
 
     treated_q_df = pd.concat(treated_q, ignore_index=True) if treated_q else pd.DataFrame()
@@ -546,10 +550,35 @@ def plot_history_forecast(prod, gran, model_name, treated_q_df, treated_m_df, fo
     fig.add_trace(go.Scatter(x=hist_x, y=hist["Valor Tratado"],
                              mode="lines+markers", name="Histórico", line=dict(color=C_GREEN, width=3), marker=dict(size=6)))
     if not fc.empty:
-        fig.add_trace(go.Scatter(x=fc_x, y=fc_y, mode="lines+markers", name=f"Forecast ({model_name})",
-                                 line=dict(color="#d62828", width=4, dash="dot"),
-                                 marker=dict(size=8, symbol="diamond", color="#d62828"),
-                                 zorder=100))
+        # separa forecast em ano 1 (firme) e ano 2 (exploratório, se houver)
+        if "Ano" in fc.columns and (fc["Ano"] == 2).any():
+            last_x = hist_x[-1]; last_y = hist["Valor Tratado"].iloc[-1]
+            fc1 = fc[fc["Ano"] == 1].sort_values("PeriodoData")
+            fc2 = fc[fc["Ano"] == 2].sort_values("PeriodoData")
+            x1 = [last_x] + [label_func(t) for t in fc1["PeriodoData"]]
+            y1 = [last_y] + fc1["Forecast"].tolist()
+            # ano 2 conecta a partir do último ponto do ano 1
+            x2 = [x1[-1]] + [label_func(t) for t in fc2["PeriodoData"]]
+            y2 = [y1[-1]] + fc2["Forecast"].tolist()
+            t1 = go.Scatter(x=x1, y=y1, mode="lines+markers", name="Forecast — ano 1 (firme)",
+                            line=dict(color="#d62828", width=4, dash="dot"),
+                            marker=dict(size=8, symbol="diamond", color="#d62828"))
+            t2 = go.Scatter(x=x2, y=y2, mode="lines+markers", name="Forecast — ano 2 (exploratório)",
+                            line=dict(color="rgba(214,40,40,0.45)", width=3, dash="dot"),
+                            marker=dict(size=7, symbol="diamond-open", color="rgba(214,40,40,0.6)"))
+            for t in (t1, t2):
+                try: t.update(zorder=100)
+                except (ValueError, TypeError): pass
+                fig.add_trace(t)
+        else:
+            fc_trace = go.Scatter(x=fc_x, y=fc_y, mode="lines+markers", name=f"Forecast ({model_name})",
+                                  line=dict(color="#d62828", width=4, dash="dot"),
+                                  marker=dict(size=8, symbol="diamond", color="#d62828"))
+            try:
+                fc_trace.update(zorder=100)  # mantém a linha acima das faixas (plotly >= 5.21)
+            except (ValueError, TypeError):
+                pass
+            fig.add_trace(fc_trace)
     eixo = "Mês" if gran == "Mensal" else "Trimestre"
     fig.update_layout(template="plotly_white", height=440, margin=dict(l=10, r=10, t=110, b=10),
                       font=dict(family="Inter, sans-serif", color="#1a2e1a"),
@@ -613,6 +642,8 @@ GROUPS = {
 
 if "nav_page" not in st.session_state:
     st.session_state.nav_page = "Início"
+if "fc_years" not in st.session_state:
+    st.session_state.fc_years = 1
 
 # Redirect automático pós-upload: leva direto aos resultados
 if st.session_state.get("go_forecast"):
@@ -639,7 +670,8 @@ with st.sidebar:
                 st.session_state.nav_page = item
                 st.rerun()
 
-    st.markdown("""<div class="sb-config"><div class="sb-config-title">Configuração atual</div>Modelos: SES · Holt · Holt-Winters<br>Parâmetros: otimização automática<br>Granularidade: mensal e trimestral (auto)<br>Horizonte: 1 ano à frente<br>Intervalo de confiança: 90%</div>""", unsafe_allow_html=True)
+    _fy = st.session_state.fc_years or 1
+    st.markdown(f"""<div class="sb-config"><div class="sb-config-title">Configuração atual</div>Modelos: SES · Holt · Holt-Winters<br>Parâmetros: otimização automática<br>Granularidade: mensal e trimestral (auto)<br>Horizonte: {_fy} ano{'s' if _fy > 1 else ''} à frente<br>Intervalo de confiança: ajustável</div>""", unsafe_allow_html=True)
 
 current = st.session_state.nav_page
 
@@ -651,6 +683,17 @@ for key in ["raw_df", "monthly", "quarterly", "treated_q", "treated_m", "summary
     if key not in st.session_state:
         st.session_state[key] = None
 
+def compute_models(fc_years):
+    """(Re)processa os modelos a partir da base mensal já carregada, com o horizonte dado."""
+    monthly = st.session_state.monthly
+    treated_q, treated_m, summary, audit, forecast = run_models(monthly, fc_years=fc_years)
+    st.session_state.treated_q = treated_q
+    st.session_state.treated_m = treated_m
+    st.session_state.summary = summary
+    st.session_state.audit = audit
+    st.session_state.forecast = forecast
+    st.session_state.fc_years = fc_years
+
 def process_file(uploaded_file):
     raw = pd.read_excel(uploaded_file) if uploaded_file.name.lower().endswith((".xlsx", ".xls")) else pd.read_csv(uploaded_file, sep=None, engine="python")
     raw = clean_dataframe(raw)
@@ -659,16 +702,11 @@ def process_file(uploaded_file):
         raise ValueError("Não foi possível identificar as colunas de Produto, Data e Quantidade.")
     monthly = prepare_monthly(raw, product_col, date_col, qty_col)
     quarterly = fill_missing_periods(monthly_to_quarterly(monthly), "Q")
-    treated_q, treated_m, summary, audit, forecast = run_models(monthly)
     st.session_state.raw_df = raw
     st.session_state.monthly = monthly
     st.session_state.quarterly = quarterly
-    st.session_state.treated_q = treated_q
-    st.session_state.treated_m = treated_m
-    st.session_state.summary = summary
-    st.session_state.audit = audit
-    st.session_state.forecast = forecast
     st.session_state.inferred_cols = (product_col, date_col, qty_col)
+    compute_models(st.session_state.fc_years)
 
 def has_results():
     return st.session_state.summary is not None and not st.session_state.summary.empty
@@ -909,59 +947,83 @@ elif current == "Resultados mais significativos":
     if st.session_state.forecast is None or st.session_state.forecast.empty:
         st.info("Faça o upload de uma base em **Upload** para gerar o forecast.")
     else:
+        produtos = sorted(st.session_state.forecast["Produto"].unique().tolist())
+
+        # Seletores: intervalo de confiança + horizonte de previsão
+        cic1, cic2, cic3 = st.columns([1, 1, 2])
+        ic_sel = cic1.selectbox("Intervalo de confiança", IC_LEVELS, index=IC_LEVELS.index(90),
+                                format_func=lambda x: f"{x}%", key="ic_global")
+        anos_sel = cic2.selectbox("Horizonte de previsão", [1, 2],
+                                  index=[1, 2].index(st.session_state.fc_years),
+                                  format_func=lambda x: f"{x} ano" if x == 1 else f"{x} anos", key="anos_global")
+        # Se mudou o horizonte, reprocessa os modelos
+        if anos_sel != st.session_state.fc_years:
+            compute_models(anos_sel)
+            st.rerun()
+
         fc_all = st.session_state.forecast.copy()
         summary = st.session_state.summary.copy()
         treated_q = st.session_state.treated_q
         treated_m = st.session_state.treated_m
-        produtos = sorted(fc_all["Produto"].unique().tolist())
-
-        # Seletor de nível de intervalo de confiança (governa cards e tabelas)
-        cic1, cic2 = st.columns([1, 3])
-        ic_sel = cic1.selectbox("Intervalo de confiança", IC_LEVELS, index=IC_LEVELS.index(90),
-                                format_func=lambda x: f"{x}%", key="ic_global")
         sup_col = f"IC {ic_sel}% Superior"
         inf_col = f"IC {ic_sel}% Inferior"
 
+        if anos_sel == 2:
+            st.markdown("""<div class="info-card-yellow" style="margin-top:0.6rem"><strong>Atenção — previsão de 2 anos:</strong>
+            o segundo ano é uma <strong>projeção exploratória de baixa confiança</strong>. Os modelos extrapolam a tendência
+            recente e o intervalo de confiança cresce bastante; além disso, o erro (MAPE) só pode ser validado para o primeiro ano.
+            Use o ano 2 como indicação de direção, não como número firme de planejamento.</div>""", unsafe_allow_html=True)
+
         # ---------- RESUMO EXECUTIVO ----------
         st.markdown('<div class="section-title">Resumo executivo</div>', unsafe_allow_html=True)
-        st.markdown(f"<div class='small-muted'>Previsão anual usando a melhor combinação de modelo e granularidade de cada produto. Limites com intervalo de confiança de {ic_sel}%.</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='small-muted'>Previsão {'anual' if anos_sel==1 else 'do período'} usando a melhor combinação de modelo e granularidade de cada produto. Limites com intervalo de confiança de {ic_sel}%.</div>", unsafe_allow_html=True)
         st.write("")
 
+        periodo_lbl = "anual" if anos_sel == 1 else "total (2 anos)"
         cols = st.columns(min(len(produtos), 3))
         for i, prod in enumerate(produtos):
             gran, model, mape_v = best_combo_for(summary, prod)
             fc_best = fc_all[(fc_all["Produto"] == prod) & (fc_all["Granularidade"] == gran) & (fc_all["Modelo"] == model)]
-            anual = fc_best["Forecast"].sum()
-            anual_sup = fc_best[sup_col].sum()
+            total = fc_best["Forecast"].sum()
+            total_sup = fc_best[sup_col].sum()
             with cols[i % len(cols)]:
+                if anos_sel == 1:
+                    extra = f"""<div class="exec-row"><span class="exec-label">Previsão anual</span><span class="exec-value">{fmt_br(total, 2)}</span></div>
+                    <div class="exec-row"><span class="exec-label">Limite superior (IC {ic_sel}%)</span><span class="exec-value">{fmt_br(total_sup, 2)}</span></div>"""
+                else:
+                    a1 = fc_best[fc_best["Ano"] == 1]["Forecast"].sum()
+                    a2 = fc_best[fc_best["Ano"] == 2]["Forecast"].sum()
+                    extra = f"""<div class="exec-row"><span class="exec-label">Ano 1 (firme)</span><span class="exec-value">{fmt_br(a1, 2)}</span></div>
+                    <div class="exec-row"><span class="exec-label" style="color:#b5651d">Ano 2 (exploratório)</span><span class="exec-value" style="color:#b5651d">{fmt_br(a2, 2)}</span></div>
+                    <div class="exec-row"><span class="exec-label">Total 2 anos</span><span class="exec-value">{fmt_br(total, 2)}</span></div>"""
                 st.markdown(f"""<div class="exec-card">
                     <div class="exec-prod">{prod}</div>
-                    <div class="exec-row"><span class="exec-label">Previsão anual</span><span class="exec-value">{fmt_br(anual, 2)}</span></div>
-                    <div class="exec-row"><span class="exec-label">Limite superior (IC {ic_sel}%)</span><span class="exec-value">{fmt_br(anual_sup, 2)}</span></div>
+                    {extra}
                     <div class="exec-row"><span class="exec-label">Melhor modelo</span><span class="exec-model">{model}</span></div>
                     <div class="exec-row"><span class="exec-label">Granularidade</span>{gran_badge_html(gran)}</div>
                     <div style="margin-top:8px">{mape_badge_html(mape_v)}</div>
                 </div>""", unsafe_allow_html=True)
 
         st.write("")
-        st.markdown("##### Previsão anual consolidada (melhor combinação de cada produto)")
-        st.markdown(f"<div class='small-muted'>Total anual previsto e granularidade escolhida por produto. Limite superior com IC {ic_sel}%.</div>", unsafe_allow_html=True)
+        st.markdown(f"##### Previsão consolidada (melhor combinação de cada produto)")
+        st.markdown(f"<div class='small-muted'>Total {periodo_lbl} previsto e granularidade escolhida por produto. Limite superior com IC {ic_sel}%.</div>", unsafe_allow_html=True)
 
         rows = []
         for prod in produtos:
             gran, model, mape_v = best_combo_for(summary, prod)
             fc_best = fc_all[(fc_all["Produto"] == prod) & (fc_all["Granularidade"] == gran) & (fc_all["Modelo"] == model)]
-            rows.append({
-                "Produto": prod, "Granularidade": gran, "Modelo": model,
-                "Total anual previsto": fc_best["Forecast"].sum(),
-                f"Limite superior anual (IC {ic_sel}%)": fc_best[sup_col].sum(),
-                "MAPE Agregado %": mape_v,
-            })
+            row = {"Produto": prod, "Granularidade": gran, "Modelo": model}
+            if anos_sel == 2:
+                row["Ano 1 (firme)"] = fc_best[fc_best["Ano"] == 1]["Forecast"].sum()
+                row["Ano 2 (exploratório)"] = fc_best[fc_best["Ano"] == 2]["Forecast"].sum()
+            row["Total previsto"] = fc_best["Forecast"].sum()
+            row[f"Limite superior (IC {ic_sel}%)"] = fc_best[sup_col].sum()
+            row["MAPE Agregado %"] = mape_v
+            rows.append(row)
         consol = pd.DataFrame(rows)
-        st.dataframe(consol.style.format({
-            "Total anual previsto": lambda v: fmt_br(v, 2),
-            f"Limite superior anual (IC {ic_sel}%)": lambda v: fmt_br(v, 2),
-            "MAPE Agregado %": lambda v: f"{v:.2f}" if pd.notna(v) else "—"}, na_rep="—"), use_container_width=True)
+        num_fmt = {c: (lambda v: fmt_br(v, 2)) for c in consol.columns if c not in ("Produto", "Granularidade", "Modelo", "MAPE Agregado %")}
+        num_fmt["MAPE Agregado %"] = lambda v: f"{v:.2f}" if pd.notna(v) else "—"
+        st.dataframe(consol.style.format(num_fmt, na_rep="—"), use_container_width=True)
 
         st.markdown("---")
 
