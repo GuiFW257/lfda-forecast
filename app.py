@@ -550,35 +550,14 @@ def plot_history_forecast(prod, gran, model_name, treated_q_df, treated_m_df, fo
     fig.add_trace(go.Scatter(x=hist_x, y=hist["Valor Tratado"],
                              mode="lines+markers", name="Histórico", line=dict(color=C_GREEN, width=3), marker=dict(size=6)))
     if not fc.empty:
-        # separa forecast em ano 1 (firme) e ano 2 (exploratório, se houver)
-        if "Ano" in fc.columns and (fc["Ano"] == 2).any():
-            last_x = hist_x[-1]; last_y = hist["Valor Tratado"].iloc[-1]
-            fc1 = fc[fc["Ano"] == 1].sort_values("PeriodoData")
-            fc2 = fc[fc["Ano"] == 2].sort_values("PeriodoData")
-            x1 = [last_x] + [label_func(t) for t in fc1["PeriodoData"]]
-            y1 = [last_y] + fc1["Forecast"].tolist()
-            # ano 2 conecta a partir do último ponto do ano 1
-            x2 = [x1[-1]] + [label_func(t) for t in fc2["PeriodoData"]]
-            y2 = [y1[-1]] + fc2["Forecast"].tolist()
-            t1 = go.Scatter(x=x1, y=y1, mode="lines+markers", name="Forecast — ano 1 (firme)",
-                            line=dict(color="#d62828", width=4, dash="dot"),
-                            marker=dict(size=8, symbol="diamond", color="#d62828"))
-            t2 = go.Scatter(x=x2, y=y2, mode="lines+markers", name="Forecast — ano 2 (exploratório)",
-                            line=dict(color="rgba(214,40,40,0.45)", width=3, dash="dot"),
-                            marker=dict(size=7, symbol="diamond-open", color="rgba(214,40,40,0.6)"))
-            for t in (t1, t2):
-                try: t.update(zorder=100)
-                except (ValueError, TypeError): pass
-                fig.add_trace(t)
-        else:
-            fc_trace = go.Scatter(x=fc_x, y=fc_y, mode="lines+markers", name=f"Forecast ({model_name})",
-                                  line=dict(color="#d62828", width=4, dash="dot"),
-                                  marker=dict(size=8, symbol="diamond", color="#d62828"))
-            try:
-                fc_trace.update(zorder=100)  # mantém a linha acima das faixas (plotly >= 5.21)
-            except (ValueError, TypeError):
-                pass
-            fig.add_trace(fc_trace)
+        fc_trace = go.Scatter(x=fc_x, y=fc_y, mode="lines+markers", name=f"Forecast ({model_name})",
+                              line=dict(color="#d62828", width=4, dash="dot"),
+                              marker=dict(size=8, symbol="diamond", color="#d62828"))
+        try:
+            fc_trace.update(zorder=100)  # mantém a linha acima das faixas (plotly >= 5.21)
+        except (ValueError, TypeError):
+            pass
+        fig.add_trace(fc_trace)
     eixo = "Mês" if gran == "Mensal" else "Trimestre"
     fig.update_layout(template="plotly_white", height=440, margin=dict(l=10, r=10, t=110, b=10),
                       font=dict(family="Inter, sans-serif", color="#1a2e1a"),
@@ -968,12 +947,6 @@ elif current == "Resultados mais significativos":
         sup_col = f"IC {ic_sel}% Superior"
         inf_col = f"IC {ic_sel}% Inferior"
 
-        if anos_sel == 2:
-            st.markdown("""<div class="info-card-yellow" style="margin-top:0.6rem"><strong>Atenção — previsão de 2 anos:</strong>
-            o segundo ano é uma <strong>projeção exploratória de baixa confiança</strong>. Os modelos extrapolam a tendência
-            recente e o intervalo de confiança cresce bastante; além disso, o erro (MAPE) só pode ser validado para o primeiro ano.
-            Use o ano 2 como indicação de direção, não como número firme de planejamento.</div>""", unsafe_allow_html=True)
-
         # ---------- RESUMO EXECUTIVO ----------
         st.markdown('<div class="section-title">Resumo executivo</div>', unsafe_allow_html=True)
         st.markdown(f"<div class='small-muted'>Previsão {'anual' if anos_sel==1 else 'do período'} usando a melhor combinação de modelo e granularidade de cada produto. Limites com intervalo de confiança de {ic_sel}%.</div>", unsafe_allow_html=True)
@@ -986,19 +959,12 @@ elif current == "Resultados mais significativos":
             fc_best = fc_all[(fc_all["Produto"] == prod) & (fc_all["Granularidade"] == gran) & (fc_all["Modelo"] == model)]
             total = fc_best["Forecast"].sum()
             total_sup = fc_best[sup_col].sum()
+            prev_label = "Previsão anual" if anos_sel == 1 else "Previsão total (2 anos)"
             with cols[i % len(cols)]:
-                if anos_sel == 1:
-                    extra = f"""<div class="exec-row"><span class="exec-label">Previsão anual</span><span class="exec-value">{fmt_br(total, 2)}</span></div>
-                    <div class="exec-row"><span class="exec-label">Limite superior (IC {ic_sel}%)</span><span class="exec-value">{fmt_br(total_sup, 2)}</span></div>"""
-                else:
-                    a1 = fc_best[fc_best["Ano"] == 1]["Forecast"].sum()
-                    a2 = fc_best[fc_best["Ano"] == 2]["Forecast"].sum()
-                    extra = f"""<div class="exec-row"><span class="exec-label">Ano 1 (firme)</span><span class="exec-value">{fmt_br(a1, 2)}</span></div>
-                    <div class="exec-row"><span class="exec-label" style="color:#b5651d">Ano 2 (exploratório)</span><span class="exec-value" style="color:#b5651d">{fmt_br(a2, 2)}</span></div>
-                    <div class="exec-row"><span class="exec-label">Total 2 anos</span><span class="exec-value">{fmt_br(total, 2)}</span></div>"""
                 st.markdown(f"""<div class="exec-card">
                     <div class="exec-prod">{prod}</div>
-                    {extra}
+                    <div class="exec-row"><span class="exec-label">{prev_label}</span><span class="exec-value">{fmt_br(total, 2)}</span></div>
+                    <div class="exec-row"><span class="exec-label">Limite superior (IC {ic_sel}%)</span><span class="exec-value">{fmt_br(total_sup, 2)}</span></div>
                     <div class="exec-row"><span class="exec-label">Melhor modelo</span><span class="exec-model">{model}</span></div>
                     <div class="exec-row"><span class="exec-label">Granularidade</span>{gran_badge_html(gran)}</div>
                     <div style="margin-top:8px">{mape_badge_html(mape_v)}</div>
@@ -1008,18 +974,17 @@ elif current == "Resultados mais significativos":
         st.markdown(f"##### Previsão consolidada (melhor combinação de cada produto)")
         st.markdown(f"<div class='small-muted'>Total {periodo_lbl} previsto e granularidade escolhida por produto. Limite superior com IC {ic_sel}%.</div>", unsafe_allow_html=True)
 
+        prev_col = "Total anual previsto" if anos_sel == 1 else "Total previsto (2 anos)"
         rows = []
         for prod in produtos:
             gran, model, mape_v = best_combo_for(summary, prod)
             fc_best = fc_all[(fc_all["Produto"] == prod) & (fc_all["Granularidade"] == gran) & (fc_all["Modelo"] == model)]
-            row = {"Produto": prod, "Granularidade": gran, "Modelo": model}
-            if anos_sel == 2:
-                row["Ano 1 (firme)"] = fc_best[fc_best["Ano"] == 1]["Forecast"].sum()
-                row["Ano 2 (exploratório)"] = fc_best[fc_best["Ano"] == 2]["Forecast"].sum()
-            row["Total previsto"] = fc_best["Forecast"].sum()
-            row[f"Limite superior (IC {ic_sel}%)"] = fc_best[sup_col].sum()
-            row["MAPE Agregado %"] = mape_v
-            rows.append(row)
+            rows.append({
+                "Produto": prod, "Granularidade": gran, "Modelo": model,
+                prev_col: fc_best["Forecast"].sum(),
+                f"Limite superior (IC {ic_sel}%)": fc_best[sup_col].sum(),
+                "MAPE Agregado %": mape_v,
+            })
         consol = pd.DataFrame(rows)
         num_fmt = {c: (lambda v: fmt_br(v, 2)) for c in consol.columns if c not in ("Produto", "Granularidade", "Modelo", "MAPE Agregado %")}
         num_fmt["MAPE Agregado %"] = lambda v: f"{v:.2f}" if pd.notna(v) else "—"
