@@ -66,6 +66,12 @@ st.markdown("""
     }
     [data-testid="stSidebar"] .stButton > button[kind="primary"]:hover { background: #ddeee3; }
 
+    /* Garante que o botão do file_uploader use o rótulo nativo, sem sobreposição */
+    [data-testid="stFileUploader"] button {
+        width: auto !important; text-align: center !important;
+        justify-content: center !important; border-left: none !important;
+    }
+
     .sb-config { margin: 14px 4px 0 4px; padding: 11px 12px; background: #f7f9fb; border: 1px solid var(--border); border-radius: 8px; font-size: 0.74rem; color: var(--muted); line-height: 1.8; }
     .sb-config-title { font-weight: 700; color: var(--text); font-size: 0.76rem; margin-bottom: 4px; }
 
@@ -723,7 +729,7 @@ if current == "Início":
         O sistema automatiza todo o processo: da leitura da planilha até a exportação dos resultados,
         rodando diretamente no navegador sem envio de dados para servidores externos.</div>""", unsafe_allow_html=True)
         st.markdown("""<div class="info-card-blue"><strong>Objetivo</strong><br><br>
-        Gerar previsões de demanda de 1 ano para cada produto. O sistema testa modelos em escala mensal
+        Gerar previsões de demanda de 1 a 2 anos para cada produto. O sistema testa modelos em escala mensal
         e trimestral e indica automaticamente a combinação de modelo e granularidade que melhor se ajusta
         ao histórico de cada produto — com base no menor erro de previsão (MAPE).</div>""", unsafe_allow_html=True)
     with col2:
@@ -772,21 +778,17 @@ if current == "Início":
     st.markdown("""<div class="step-flow">
         <div class="step-item"><div class="step-circle">1</div><div class="step-label">Upload</div><div class="step-desc">Envie o Excel com Produto, Data e Quantidade</div></div>
         <div class="step-arrow">→</div>
-        <div class="step-item"><div class="step-circle">2</div><div class="step-label">Validação</div><div class="step-desc">Sistema identifica colunas e converte datas</div></div>
+        <div class="step-item"><div class="step-circle">2</div><div class="step-label">Validação</div><div class="step-desc">Sistema identifica colunas e converte datas automaticamente</div></div>
         <div class="step-arrow">→</div>
-        <div class="step-item"><div class="step-circle">3</div><div class="step-label">Trimestral</div><div class="step-desc">Base mensal agregada em trimestres</div></div>
+        <div class="step-item"><div class="step-circle">3</div><div class="step-label">Tratamento</div><div class="step-desc">Agregação em escala mensal e trimestral, com redistribuição dos zeros sem alterar o total</div></div>
         <div class="step-arrow">→</div>
-        <div class="step-item"><div class="step-circle">4</div><div class="step-label">Zeros</div><div class="step-desc">Zeros redistribuídos sem alterar o total</div></div>
+        <div class="step-item"><div class="step-circle">4</div><div class="step-label">Modelos</div><div class="step-desc">SES, Holt e Holt-Winters calibrados nas duas escalas</div></div>
         <div class="step-arrow">→</div>
-        <div class="step-item"><div class="step-circle">5</div><div class="step-label">Split</div><div class="step-desc">Treino e teste adaptativos</div></div>
+        <div class="step-item"><div class="step-circle">5</div><div class="step-label">Avaliação</div><div class="step-desc">Split treino/teste adaptativo e cálculo do MAPE por período e agregado</div></div>
         <div class="step-arrow">→</div>
-        <div class="step-item"><div class="step-circle">6</div><div class="step-label">Modelos</div><div class="step-desc">SES, Holt e Holt-Winters calibrados</div></div>
+        <div class="step-item"><div class="step-circle">6</div><div class="step-label">Seleção</div><div class="step-desc">Escolha automática do melhor modelo e escala de cada produto</div></div>
         <div class="step-arrow">→</div>
-        <div class="step-item"><div class="step-circle">7</div><div class="step-label">MAPE</div><div class="step-desc">Erro por período e agregado</div></div>
-        <div class="step-arrow">→</div>
-        <div class="step-item"><div class="step-circle">8</div><div class="step-label">Forecast</div><div class="step-desc">4 trimestres com IC 90%</div></div>
-        <div class="step-arrow">→</div>
-        <div class="step-item"><div class="step-circle">9</div><div class="step-label">Exportação</div><div class="step-desc">Excel formatado completo</div></div>
+        <div class="step-item"><div class="step-circle">7</div><div class="step-label">Forecast e Exportação</div><div class="step-desc">Previsão de 1–2 anos com IC ajustável e exportação em Excel</div></div>
     </div>""", unsafe_allow_html=True)
 
     st.markdown("---")
@@ -830,7 +832,7 @@ elif current == "Upload":
         st.markdown("### Prévia da base original")
         st.dataframe(st.session_state.raw_df.head(30), use_container_width=True)
     else:
-        st.info("Comece subindo a planilha. Depois acesse a aba Forecast para ver as previsões.")
+        st.info("Comece subindo a planilha. Depois acesse a aba **Resultados mais significativos** para ver as previsões.")
 
 
 # =========================================================
