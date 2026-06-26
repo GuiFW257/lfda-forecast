@@ -752,28 +752,6 @@ if current == "Início":
                                "Data": ["março de 2026"] * 5, "Quantidade": [5000, 16000, 1000, 1000, 500]}), use_container_width=True)
 
     st.markdown("---")
-    st.markdown('<div class="section-title">Como funcionam os modelos estatísticos</div>', unsafe_allow_html=True)
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        st.markdown("""<div class="model-card"><div class="model-title">SES — Suavização Exponencial Simples</div>
-        <div class="model-desc">Calcula uma <strong>média ponderada do histórico</strong>, dando mais peso aos períodos
-        recentes. O parâmetro <strong>Alpha (α)</strong> controla essa ponderação. Projeta um valor constante —
-        não captura tendência nem sazonalidade.</div>
-        <div class="model-when">Indicado quando: demanda oscila sem tendência nem padrão sazonal.</div></div>""", unsafe_allow_html=True)
-    with c2:
-        st.markdown("""<div class="model-card"><div class="model-title">Holt — Suavização com Tendência</div>
-        <div class="model-desc">Adiciona um <strong>componente de tendência</strong> ao SES, projetando uma linha com
-        inclinação. Usa <strong>Alpha (α)</strong> para o nível e <strong>Beta (β)</strong> para a tendência.
-        Não captura sazonalidade.</div>
-        <div class="model-when">Indicado quando: demanda tem crescimento ou queda consistente.</div></div>""", unsafe_allow_html=True)
-    with c3:
-        st.markdown("""<div class="model-card"><div class="model-title">Holt-Winters — Tendência e Sazonalidade</div>
-        <div class="model-desc">O mais completo. Adiciona um <strong>componente sazonal</strong> (ciclo de 4 trimestres).
-        Usa <strong>Alpha (α)</strong>, <strong>Beta (β)</strong> e <strong>Gamma (γ)</strong>. Requer ao menos
-        8 trimestres de histórico.</div>
-        <div class="model-when">Indicado quando: demanda tem picos e vales anuais.</div></div>""", unsafe_allow_html=True)
-
-    st.markdown("---")
     st.markdown('<div class="section-title">Fluxo completo — passo a passo</div>', unsafe_allow_html=True)
     st.markdown("""<div class="step-flow">
         <div class="step-item"><div class="step-circle">1</div><div class="step-label">Upload</div><div class="step-desc">Envie o Excel com Produto, Data e Quantidade</div></div>
